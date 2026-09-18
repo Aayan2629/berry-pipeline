@@ -140,6 +140,8 @@ def days_since_last_post(history):
 def carousels_for(category):
     """Every carousel folder belonging to a category, lowest part first."""
     out = []
+    if not os.path.isdir(QUEUE):
+        return []
     for name in sorted(os.listdir(QUEUE)):
         d = os.path.join(QUEUE, name)
         meta = os.path.join(d, "meta.json")

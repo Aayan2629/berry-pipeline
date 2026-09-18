@@ -299,6 +299,9 @@ def clear_queue():
     """
     old = os.path.join(HERE, "old_carousels")
     moved = 0
+    # queue_carousels/ is generated output and is not in git, so on a fresh
+    # checkout (GitHub Actions) it does not exist yet. Nothing to clear.
+    os.makedirs(OUT_ROOT, exist_ok=True)
     for name in sorted(os.listdir(OUT_ROOT)):
         src = os.path.join(OUT_ROOT, name)
         if not os.path.isdir(src):
