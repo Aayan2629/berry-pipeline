@@ -1,0 +1,16 @@
+# What this project actually needs.
+#
+# Install everything:
+#     pip3 install --user -r requirements.txt
+#
+# There is no Scrapy, no Twisted and no Postgres here any more. The Scrapy
+# crawler that shipped with SeekSpider was deleted -- it spent an hour per run
+# getting 403s from Cloudflare. scrapers/seek.py talks to Seek's own API
+# instead and needs nothing but "requests".
+
+requests>=2.32          # every scraper and the liveness check
+Pillow>=10.0            # poster_template.py draws the carousel slides
+python-jobspy>=1.1.80   # scrapers/other_boards.py -- LinkedIn, Indeed, Glassdoor, Google
+pandas>=2.0             # JobSpy hands its results back as a DataFrame
+certifi>=2024.2         # macOS python.org builds have no certificate store of
+                        # their own; get_backgrounds.py uses this when present

@@ -1,0 +1,155 @@
+# ---------------------------------------------------------------------------
+# berry.yml -- the whole account, once a day, hands off.
+#
+# Scrapes, checks what closed, rebuilds the site, deploys it, builds the
+# slides and posts whatever is due. Then it commits its own state back so the
+# next run knows what it already did.
+#
+# RUN probe.yml FIRST. If the boards block GitHub's addresses this workflow
+# will run perfectly and post nothing, which is the worst kind of broken.
+#
+# WHAT IT NEEDS (Settings -> Secrets and variables -> Actions)
+#   IG_USER_ID          from your .env
+#   IG_ACCESS_TOKEN     from your .env
+#   IG_TOKEN_OBTAINED   from your .env, the ISO date, e.g. 2026-09-02
+#   NETLIFY_TOKEN       from your .env
+#   GH_SLIDES_TOKEN     a personal access token that can push to berry-slides
+#
+# Copy the values straight from .env into the secrets boxes. Never commit
+# .env itself -- this workflow writes a fresh one at the start of every run
+# and the runner is destroyed at the end of it.
+#
+# WHY IT RUNS EVERY DAY WHEN YOU ONLY POST THREE TIMES A WEEK
+# publish_to_instagram.py already knows the schedule: Monday tech, Thursday
+# business, Saturday engineering, and overflow parts on the following day. On
+# any other day it finds nothing due and exits happily. Putting that decision
+# in one place beats encoding the calendar twice and watching the two drift.
+# ---------------------------------------------------------------------------
+name: 1. berry, daily
+
+on:
+  schedule:
+    # 21:20 UTC. That is 8:20am Sydney in summer, 7:20am in winter.
+    # Twenty past, not on the hour: GitHub queues scheduled jobs and the top
+    # of every hour is its busiest minute, so :00 is where the long delays
+    # live. There is no guarantee on the minute either way -- if this has to
+    # land at an exact time, GitHub cron is the wrong tool.
+    - cron: '20 21 * * *'
+  workflow_dispatch:
+
+# Two runs must never overlap. The second one would read state the first has
+# not committed yet and could post the same carousel twice. Queue, never
+# cancel: a half-finished publish is worse than a late one.
+concurrency:
+  group: berry-pipeline
+  cancel-in-progress: false
+
+permissions:
+  contents: write        # so it can commit its own state back
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Fonts
+        # poster_template.py draws every slide with DejaVu and Nunito. Nunito
+        # is in the repo; DejaVu comes with macOS but not with a bare Ubuntu
+        # runner, and without it the slides render in a fallback face that
+        # looks nothing like your account.
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq fonts-dejavu-core
+          cp /usr/share/fonts/truetype/dejavu/DejaVuSans.ttf       pipeline_scripts/fonts/ || true
+          cp /usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf  pipeline_scripts/fonts/ || true
+          ls pipeline_scripts/fonts/
+
+      - name: Write .env from the secrets
+        # The scripts read .env and know nothing about GitHub. Writing the
+        # file here means not one line of your pipeline had to change to run
+        # in the cloud, and the same scripts still work on your Mac.
+        env:
+          IG_USER_ID:        ${{ secrets.IG_USER_ID }}
+          IG_ACCESS_TOKEN:   ${{ secrets.IG_ACCESS_TOKEN }}
+          IG_TOKEN_OBTAINED: ${{ secrets.IG_TOKEN_OBTAINED }}
+          NETLIFY_TOKEN:     ${{ secrets.NETLIFY_TOKEN }}
+          GH_SLIDES_TOKEN:   ${{ secrets.GH_SLIDES_TOKEN }}
+        run: |
+          cd pipeline_scripts
+          {
+            echo "IG_USER_ID=${IG_USER_ID}"
+            echo "IG_ACCESS_TOKEN=${IG_ACCESS_TOKEN}"
+            echo "IG_TOKEN_OBTAINED=${IG_TOKEN_OBTAINED}"
+            echo "NETLIFY_TOKEN=${NETLIFY_TOKEN}"
+            echo "GITHUB_TOKEN=${GH_SLIDES_TOKEN}"
+          } > .env
+          echo "wrote .env with $(wc -l < .env) keys"
+
+      - name: Clone berry-slides
+        # upload_slides.py pushes the JPEGs into this clone and Meta fetches
+        # them from raw.githubusercontent. It expects the clone to sit beside
+        # the project, the same as it does on your Desktop.
+        env:
+          GH_SLIDES_TOKEN: ${{ secrets.GH_SLIDES_TOKEN }}
+        run: |
+          cd ..
+          git clone --depth 1 \
+            "https://x-access-token:${GH_SLIDES_TOKEN}@github.com/${{ github.repository_owner }}/berry-slides.git" \
+            berry-slides
+          cd berry-slides
+          git config user.name  "berry bot"
+          git config user.email "actions@github.com"
+
+      - name: Refresh
+        # scrape, check what closed, rebuild the site, deploy it, build slides
+        run: |
+          cd pipeline_scripts
+          python refresh.py
+
+      - name: Post whatever is due
+        # Exits 0 with "nothing due today" on the four non-posting days, so a
+        # quiet day is a green tick rather than a red cross you learn to
+        # ignore.
+        run: |
+          cd pipeline_scripts
+          python publish_to_instagram.py
+
+      - name: Throw away old crawls
+        # Every scrape writes a new dated folder and build_carousels.py reads
+        # all of them. Left alone that grows forever and every run gets
+        # slower. Twenty is far more history than anything here looks at.
+        run: |
+          cd output/seek_spider
+          ls -1t | tail -n +21 | xargs -r rm -rf
+          echo "$(ls -1 | wc -l) crawl(s) kept"
+
+      - name: Commit the state back
+        # The runner is deleted when the job ends, so anything not committed
+        # is forgotten -- and "what have I already posted" being forgotten
+        # means posting it again tomorrow.
+        run: |
+          git config user.name  "berry bot"
+          git config user.email "actions@github.com"
+          git add -A output pipeline_scripts/*.json pipeline_scripts/logos \
+                       pipeline_scripts/berry_internships.html
+          if git diff --cached --quiet; then
+            echo "nothing changed"
+          else
+            git commit -m "berry: $(date -u '+%Y-%m-%d %H:%M') run"
+            git push
+          fi
+
+      - name: Keep the slides out of the log
+        if: always()
+        run: rm -f pipeline_scripts/.env

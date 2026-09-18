@@ -1,0 +1,72 @@
+# ---------------------------------------------------------------------------
+# probe.yml -- RUN THIS ONE FIRST, BY HAND, BEFORE ANYTHING ELSE.
+#
+# The whole plan rests on one question nobody can answer from a desk: do the
+# job boards answer a GitHub runner at all?
+#
+# Your scrapers work from your flat because they come from a normal home
+# internet connection. GitHub's runners live in Microsoft Azure datacentres,
+# and Seek, LinkedIn, Indeed and Glassdoor all treat datacentre addresses very
+# differently from home ones. They may answer normally, they may hand back an
+# empty list, or they may return 403.
+#
+# Nothing here posts, deploys or writes anything. It asks each board for a
+# handful of jobs and prints how many came back. If the numbers look like your
+# Mac's numbers, the rest of this works. If they are zeroes, it does not, and
+# you have found that out in ten minutes instead of after a weekend.
+#
+# HOW TO RUN IT
+#   Actions tab -> "0. Can the scrapers run here?" -> Run workflow
+# ---------------------------------------------------------------------------
+name: 0. Can the scrapers run here?
+
+on:
+  workflow_dispatch:
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+
+      - name: Install what the scrapers need
+        run: pip install -r requirements.txt
+
+      - name: Where is this runner, actually
+        # Not idle curiosity. If the boards answer with nothing, the first
+        # question is going to be "what did they think they were talking to",
+        # and the answer is this line.
+        run: |
+          echo "Outbound address and its owner:"
+          curl -s --max-time 15 https://ipinfo.io/json || echo "  (ipinfo unreachable)"
+
+      - name: Seek
+        continue-on-error: true
+        run: |
+          python scrapers/seek.py --quick --pages 1 --no-descriptions
+          echo "--- what came back ---"
+          find output -name 'jobs.jsonl' -newermt '-10 minutes' -exec wc -l {} +
+
+      - name: LinkedIn, Indeed, Glassdoor, Google
+        continue-on-error: true
+        run: |
+          python scrapers/other_boards.py --results 10
+          echo "--- what came back ---"
+          find output -name 'jobs.jsonl' -newermt '-10 minutes' -exec wc -l {} +
+
+      - name: Verdict
+        if: always()
+        run: |
+          echo "======================================================"
+          echo " Numbers in the hundreds, or even dozens: this works."
+          echo " Zeroes, 403s or empty files: the boards are blocking"
+          echo " the datacentre. Stop here and scrape from your Mac"
+          echo " instead -- do not build the rest on top of this."
+          echo "======================================================"

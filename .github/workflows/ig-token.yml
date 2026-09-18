@@ -1,0 +1,64 @@
+# ---------------------------------------------------------------------------
+# ig-token.yml -- keep the Instagram token alive.
+#
+# Without this, everything else works beautifully for about two months and
+# then stops, silently, because the token died and nothing renewed it.
+#
+# Runs weekly and usually does nothing: the script only refreshes when there
+# are fewer than 25 days left. Weekly rather than monthly so that one missed
+# run, one outage or one delayed schedule cannot cost you the window.
+#
+# NEEDS ONE MORE SECRET: GH_PAT
+#   github.com -> Settings -> Developer settings -> Personal access tokens
+#     -> Fine-grained tokens -> Generate new token
+#   Repository access: only this repo
+#   Repository permissions -> Secrets: Read and write
+#
+# A workflow cannot change its own secrets with the token GitHub gives it,
+# which is a good rule and the reason this extra one exists.
+# ---------------------------------------------------------------------------
+name: 2. Keep the Instagram token alive
+
+on:
+  schedule:
+    - cron: '40 20 * * 1'      # Mondays, 20:40 UTC
+  workflow_dispatch:
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+
+      - run: pip install requests pynacl
+
+      - name: Write .env from the secrets
+        env:
+          IG_USER_ID:        ${{ secrets.IG_USER_ID }}
+          IG_ACCESS_TOKEN:   ${{ secrets.IG_ACCESS_TOKEN }}
+          IG_TOKEN_OBTAINED: ${{ secrets.IG_TOKEN_OBTAINED }}
+        run: |
+          cd pipeline_scripts
+          {
+            echo "IG_USER_ID=${IG_USER_ID}"
+            echo "IG_ACCESS_TOKEN=${IG_ACCESS_TOKEN}"
+            echo "IG_TOKEN_OBTAINED=${IG_TOKEN_OBTAINED}"
+          } > .env
+
+      - name: Refresh it if it is getting old
+        env:
+          GH_PAT: ${{ secrets.GH_PAT }}
+        run: |
+          cd pipeline_scripts
+          python refresh_ig_token.py --github
+
+      - name: Clean up
+        if: always()
+        run: rm -f pipeline_scripts/.env

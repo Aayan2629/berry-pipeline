@@ -1,0 +1,690 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Berry Pipeline Map</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@600;800&family=Inter+Tight:wght@400;500;600&family=JetBrains+Mono:wght@400;700&display=swap">
+<style>
+/* ===========================================================================
+   Tokens. Same palette as the job board, so this reads as part of berry
+   rather than as a separate document. Every colour is defined here on bare
+   :root first; the dark blocks below only redefine them.
+   ======================================================================== */
+:root {
+  --berry:      #c42d5e;
+  --berry-ink:  #8e1e42;
+  --teal:       #1a6c70;
+  --teal-ink:   #12494c;
+
+  --ground:     #f7f3f1;
+  --card:       #ffffff;
+  --sunk:       #f1ebe8;
+  --ink:        #1c1518;
+  --muted:      #6f6560;
+  --line:       #e6dfdb;
+  --line-soft:  #efe9e6;
+
+  --code-bg:    #1c1518;
+  --code-ink:   #f4eeeb;
+  --code-dim:   #9c908a;
+
+  --r:   14px;
+  --r-s: 9px;
+  --dur: .22s;
+  --ease: cubic-bezier(.2,.7,.3,1);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --berry:     #ef6d95;
+    --berry-ink: #ffa8c0;
+    --teal:      #4fb7bc;
+    --teal-ink:  #86d6da;
+
+    --ground:    #151110;
+    --card:      #201a18;
+    --sunk:      #191413;
+    --ink:       #f2edea;
+    --muted:     #a89e99;
+    --line:      #322a27;
+    --line-soft: #292220;
+
+    --code-bg:   #0e0b0a;
+    --code-ink:  #f2edea;
+    --code-dim:  #7e746f;
+  }
+}
+:root[data-theme="dark"] {
+  --berry:     #ef6d95;
+  --berry-ink: #ffa8c0;
+  --teal:      #4fb7bc;
+  --teal-ink:  #86d6da;
+
+  --ground:    #151110;
+  --card:      #201a18;
+  --sunk:      #191413;
+  --ink:       #f2edea;
+  --muted:     #a89e99;
+  --line:      #322a27;
+  --line-soft: #292220;
+
+  --code-bg:   #0e0b0a;
+  --code-ink:  #f2edea;
+  --code-dim:  #7e746f;
+}
+
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0;
+  padding-block: 0 72px;
+  padding-inline: 20px;
+  background: var(--ground);
+  color: var(--ink);
+  font: 16px/1.55 "Inter Tight", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+.wrap { max-width: 860px; margin: 0 auto; }
+
+:focus-visible { outline: 2px solid var(--berry); outline-offset: 3px; border-radius: 4px; }
+@media (prefers-reduced-motion: reduce) {
+  * { transition: none !important; animation: none !important; }
+}
+
+/* ---- header ------------------------------------------------------------ */
+header { padding-block: 44px 8px; }
+.eyebrow {
+  font: 700 11px/1 "JetBrains Mono", ui-monospace, monospace;
+  letter-spacing: .18em; text-transform: uppercase; color: var(--muted);
+}
+h1 {
+  font: 800 clamp(30px, 6vw, 46px)/1.04 Archivo, "Inter Tight", sans-serif;
+  letter-spacing: -.035em; margin: 14px 0 0; text-wrap: balance;
+}
+h1 em { font-style: normal; color: var(--berry); }
+.lede {
+  max-width: 60ch; color: var(--muted); margin: 14px 0 0; font-size: 17px;
+}
+
+/* ---- the mode switch --------------------------------------------------- */
+.modes {
+  display: flex; flex-wrap: wrap; gap: 8px; margin: 26px 0 0;
+}
+.modes button {
+  font: 600 13.5px "Inter Tight", sans-serif;
+  padding: 8px 15px; border-radius: 999px; cursor: pointer;
+  border: 1px solid var(--line); background: var(--card); color: var(--muted);
+  transition: color var(--dur) var(--ease), border-color var(--dur) var(--ease);
+}
+.modes button:hover { color: var(--ink); border-color: var(--muted); }
+/* The pressed pill takes its text colour from the ground, not from white:
+   on the dark theme the accent lightens, and white on it goes muddy. */
+.modes button[aria-pressed="true"] {
+  background: var(--berry); border-color: var(--berry); color: var(--ground);
+}
+
+/* ---- the spine --------------------------------------------------------- */
+.spine { list-style: none; margin: 40px 0 0; padding: 0; position: relative; }
+/* The line that makes it a spine rather than four cards. It stops short at
+   the bottom so the last stage reads as an end, not a continuation. */
+.spine::before {
+  content: ""; position: absolute; left: 21px; top: 26px; bottom: 34px;
+  width: 2px; background: var(--line); border-radius: 2px;
+}
+.stage { position: relative; padding-left: 58px; padding-bottom: 14px; }
+
+.dot {
+  position: absolute; left: 0; top: 10px;
+  width: 44px; height: 44px; border-radius: 50%;
+  display: grid; place-items: center;
+  background: var(--card); border: 2px solid var(--line);
+  font: 700 15px/1 "JetBrains Mono", ui-monospace, monospace;
+  color: var(--muted);
+  transition: border-color var(--dur) var(--ease), color var(--dur) var(--ease);
+}
+.stage.open .dot { border-color: var(--berry); color: var(--berry); }
+
+.node {
+  width: 100%; text-align: left; cursor: pointer;
+  background: var(--card); border: 1px solid var(--line);
+  border-radius: var(--r); padding: 15px 44px 15px 18px;
+  position: relative; color: inherit; font: inherit;
+  transition: border-color var(--dur) var(--ease), transform var(--dur) var(--ease);
+}
+.node:hover { border-color: var(--muted); }
+.stage.open .node { border-color: var(--berry); }
+.node h2 {
+  font: 600 19px/1.2 Archivo, "Inter Tight", sans-serif;
+  letter-spacing: -.02em; margin: 0;
+}
+.node p { margin: 5px 0 0; color: var(--muted); font-size: 14.5px; }
+.chev {
+  position: absolute; right: 16px; top: 50%; width: 11px; height: 11px;
+  margin-top: -7px; border-right: 2px solid var(--muted);
+  border-bottom: 2px solid var(--muted); transform: rotate(45deg);
+  transition: transform var(--dur) var(--ease);
+}
+.stage.open .chev { transform: rotate(-135deg); margin-top: -3px; }
+
+.detail { padding: 4px 2px 6px; }
+.detail > p { max-width: 62ch; color: var(--muted); font-size: 15px; margin: 14px 0 0; }
+.detail > p strong { color: var(--ink); font-weight: 600; }
+
+/* ---- a command block --------------------------------------------------- */
+.cmd {
+  display: flex; align-items: center; gap: 10px;
+  background: var(--code-bg); border-radius: var(--r-s);
+  padding: 11px 11px 11px 14px; margin-top: 12px;
+  overflow-x: auto;
+}
+.cmd code {
+  font: 400 13.5px/1.5 "JetBrains Mono", ui-monospace, monospace;
+  color: var(--code-ink); white-space: pre; flex: 1 1 auto;
+}
+.cmd code .flag { color: #f0a0b8; }
+.cmd code .arg  { color: #86d6da; }
+.copy {
+  flex: none; cursor: pointer; border: 0; border-radius: 6px;
+  background: #ffffff1a; color: var(--code-dim);
+  font: 600 11.5px "Inter Tight", sans-serif; padding: 6px 10px;
+  transition: background var(--dur) var(--ease), color var(--dur) var(--ease);
+}
+.copy:hover { background: #ffffff2e; color: var(--code-ink); }
+.copy.done { color: #8ee6a8; }
+.why { font-size: 13.5px; color: var(--muted); margin: 7px 0 0; max-width: 60ch; }
+
+/* ---- the seven things refresh.py does ---------------------------------- */
+.inner {
+  list-style: none; margin: 16px 0 0; padding: 0 0 0 16px;
+  border-left: 2px dashed var(--line);
+}
+/* Named areas rather than auto-placement: the step number spans both rows,
+   the script name sits on the first and its explanation on the second.
+   Placing by column alone let both land in row one and print over
+   each other. */
+.inner li {
+  display: grid;
+  grid-template-columns: 26px 1fr;
+  grid-template-areas: "n name" "n desc";
+  gap: 2px 12px;
+  padding: 10px 0; border-bottom: 1px solid var(--line-soft);
+}
+.inner li:last-child { border-bottom: 0; }
+.inner .n {
+  grid-area: n;
+  font: 700 11px/1.9 "JetBrains Mono", ui-monospace, monospace;
+  color: var(--muted);
+}
+.inner b {
+  grid-area: name;
+  font: 600 14.5px/1.35 "Inter Tight", sans-serif;
+}
+.inner li > span:not(.n) {
+  grid-area: desc;
+  font-size: 13.5px; color: var(--muted); max-width: 58ch;
+}
+code.mini {
+  font: 400 12.5px "JetBrains Mono", ui-monospace, monospace;
+  background: var(--sunk); border-radius: 4px; padding: 1px 5px;
+  color: var(--ink); white-space: nowrap;
+}
+.opt {
+  display: inline-block; margin-left: 7px; vertical-align: 1px;
+  font: 700 9.5px/1 "JetBrains Mono", ui-monospace, monospace;
+  letter-spacing: .08em; text-transform: uppercase;
+  color: var(--teal); border: 1px solid var(--teal);
+  border-radius: 4px; padding: 3px 5px; opacity: .8;
+}
+
+/* ---- branches ---------------------------------------------------------- */
+.branch-head { margin: 52px 0 0; }
+.branch-head h2 {
+  font: 800 22px/1.2 Archivo, "Inter Tight", sans-serif;
+  letter-spacing: -.025em; margin: 0;
+}
+.branch-head p { color: var(--muted); margin: 8px 0 0; max-width: 62ch; font-size: 15px; }
+
+.branches { display: grid; gap: 12px; margin-top: 22px; }
+.branch {
+  background: var(--card); border: 1px solid var(--line);
+  border-left: 3px solid var(--teal); border-radius: var(--r);
+  overflow: hidden;
+}
+.branch > button {
+  width: 100%; text-align: left; cursor: pointer; color: inherit;
+  background: none; border: 0; padding: 14px 42px 14px 17px;
+  font: inherit; position: relative;
+}
+.branch > button b {
+  font: 600 16px/1.3 "Inter Tight", sans-serif; display: block;
+}
+.branch > button span { font-size: 13.5px; color: var(--muted); }
+.branch > button .chev { border-color: var(--teal); }
+.branch.open > button .chev { transform: rotate(-135deg); margin-top: -3px; }
+.branch .body { padding: 0 17px 16px; }
+.branch .body > p { color: var(--muted); font-size: 14.5px; margin: 2px 0 0; max-width: 62ch; }
+
+/* ---- "just the commands" mode ------------------------------------------ */
+body.bare .detail,
+body.bare .branch .body,
+body.bare .lede,
+body.bare .branch-head p,
+body.bare .node p { display: none; }
+body.bare .stage { padding-bottom: 6px; }
+
+/* ---- footer ------------------------------------------------------------ */
+footer {
+  margin-top: 54px; padding-top: 22px; border-top: 1px solid var(--line);
+  color: var(--muted); font-size: 14px; max-width: 62ch;
+}
+footer code {
+  font: 400 13px "JetBrains Mono", ui-monospace, monospace;
+  background: var(--sunk); padding: 2px 6px; border-radius: 5px; color: var(--ink);
+}
+
+@media (max-width: 560px) {
+  .stage { padding-left: 46px; }
+  .spine::before { left: 17px; }
+  .dot { width: 36px; height: 36px; font-size: 13px; }
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <p class="eyebrow">berry.internships.syd &middot; pipeline_scripts</p>
+  <h1>Four commands and <em>it's posted</em></h1>
+  <p class="lede">
+    Everything in the folder hangs off one straight line: refresh, check,
+    look, post. Everything else is a branch you only take when something
+    is wrong. Tap any step to open it.
+  </p>
+  <div class="modes">
+    <button type="button" id="mode-all" aria-pressed="true">Show the detail</button>
+    <button type="button" id="mode-bare" aria-pressed="false">Just the commands</button>
+    <button type="button" id="expand">Open everything</button>
+  </div>
+</header>
+
+<main>
+<ol class="spine" id="spine">
+
+  <!-- 1 ------------------------------------------------------------------ -->
+  <li class="stage open" id="s1">
+    <span class="dot" aria-hidden="true">1</span>
+    <button type="button" class="node" aria-expanded="true" aria-controls="d1">
+      <h2>Refresh</h2>
+      <p>Scrape, rebuild, deploy, make the slides. One command does all seven.</p>
+      <span class="chev" aria-hidden="true"></span>
+    </button>
+    <div class="detail" id="d1">
+      <div class="cmd">
+        <code>python3 refresh.py</code>
+        <button type="button" class="copy">Copy</button>
+      </div>
+      <p class="why">Takes a few minutes. The slow part is the scrapers.</p>
+
+      <ol class="inner">
+        <li><span class="n">1</span><b>ig_sync.py<span class="opt">optional</span></b>
+          <span>Asks Instagram what is already up, so anything you posted from
+            your phone gets filed and its listings never come back on a future
+            slide.</span></li>
+        <li><span class="n">2</span><b>seek.py</b>
+          <span>Scrape Seek.</span></li>
+        <li><span class="n">3</span><b>LinkedIn, Indeed, Glassdoor, Google</b>
+          <span>The other boards.</span></li>
+        <li><span class="n">4</span><b>check_live.py<span class="opt">optional</span></b>
+          <span>Asks each board whether a listing actually closed, rather than
+            guessing from it being absent.</span></li>
+        <li><span class="n">5</span><b>build_site.py</b>
+          <span>Rebuilds berry_internships.html on your disk.</span></li>
+        <li><span class="n">6</span><b>deploy_site.py<span class="opt">optional</span></b>
+          <span>Puts that file live on internberry.netlify.app. No token in
+            .env means it tells you how to set one up and the run carries
+            on.</span></li>
+        <li><span class="n">7</span><b>build_carousels.py</b>
+          <span>Renders every slide, with <code class="mini">--rebuild</code> so a
+            style change actually reaches the queue.</span></li>
+      </ol>
+
+      <p><strong>If a step fails.</strong> The three marked optional cannot stop
+      the run. A missing Netlify token should never cost you your carousels.</p>
+
+      <div class="cmd">
+        <code>python3 refresh.py <span class="flag">--fast</span></code>
+        <button type="button" class="copy">Copy</button>
+      </div>
+      <p class="why">Skips the slow scrapers when you only want a rebuild.</p>
+    </div>
+  </li>
+
+  <!-- 2 ------------------------------------------------------------------ -->
+  <li class="stage" id="s2">
+    <span class="dot" aria-hidden="true">2</span>
+    <button type="button" class="node" aria-expanded="false" aria-controls="d2">
+      <h2>Check what's due</h2>
+      <p>The dashboard tells you what goes out today and hands you the command.</p>
+      <span class="chev" aria-hidden="true"></span>
+    </button>
+    <div class="detail" id="d2" hidden>
+      <div class="cmd">
+        <code>python3 dashboard.py</code>
+        <button type="button" class="copy">Copy</button>
+      </div>
+      <p><strong>The schedule.</strong> Monday is Technology, Data &amp; AI.
+      Thursday is Business, Commerce, Marketing &amp; Finance. Saturday is
+      Engineering. When a category has more roles than fit in one post, the
+      overflow lands on the next day.</p>
+      <p>The dashboard also carries the logo queue and a line saying what is
+      actually on Instagram, which goes amber when that snapshot is more than
+      a day old.</p>
+    </div>
+  </li>
+
+  <!-- 3 ------------------------------------------------------------------ -->
+  <li class="stage" id="s3">
+    <span class="dot" aria-hidden="true">3</span>
+    <button type="button" class="node" aria-expanded="false" aria-controls="d3">
+      <h2>Look at it</h2>
+      <p>Every queued carousel as real slides, with the caption Instagram will get.</p>
+      <span class="chev" aria-hidden="true"></span>
+    </button>
+    <div class="detail" id="d3" hidden>
+      <div class="cmd">
+        <code>python3 preview.py</code>
+        <button type="button" class="copy">Copy</button>
+      </div>
+      <p>Nothing is uploaded and nothing is changed. It reads the JPEGs
+      straight off disk, so what you see is the actual file that would go
+      out, not a mock-up of it.</p>
+      <p><strong>Worth doing.</strong> This is where you catch a duplicate
+      listing, a missing logo or a title that got truncated, while it still
+      costs nothing to fix.</p>
+    </div>
+  </li>
+
+  <!-- 4 ------------------------------------------------------------------ -->
+  <li class="stage" id="s4">
+    <span class="dot" aria-hidden="true">4</span>
+    <button type="button" class="node" aria-expanded="false" aria-controls="d4">
+      <h2>Post it</h2>
+      <p>Publishes what the schedule says is due. It does not stop to ask, so step 3 is the check.</p>
+      <span class="chev" aria-hidden="true"></span>
+    </button>
+    <div class="detail" id="d4" hidden>
+      <div class="cmd">
+        <code>python3 publish_to_instagram.py</code>
+        <button type="button" class="copy">Copy</button>
+      </div>
+      <p class="why">Posts whatever is due today.</p>
+
+      <div class="cmd">
+        <code>python3 publish_to_instagram.py <span class="flag">--dry-run</span></code>
+        <button type="button" class="copy">Copy</button>
+      </div>
+      <p class="why">Walks the whole thing and publishes nothing.</p>
+
+      <div class="cmd">
+        <code>python3 publish_to_instagram.py <span class="arg">technology-data-ai-part1</span></code>
+        <button type="button" class="copy">Copy</button>
+      </div>
+      <p class="why">One named carousel instead of whatever is due.</p>
+
+      <p><strong>Why it takes a minute.</strong> Instagram never accepts a
+      file. The slides are pushed to a public GitHub URL first, then Meta
+      fetches them itself, then the post is published. Three steps, and the
+      middle one is out of your hands.</p>
+      <p>Once it succeeds the carousel moves out of the queue and its listings
+      are recorded, so the same six jobs can never appear on a future slide.</p>
+    </div>
+  </li>
+
+</ol>
+
+<!-- branches ------------------------------------------------------------- -->
+<section class="branch-head">
+  <h2>When something is off</h2>
+  <p>Each of these is a detour off the line above. You take one, then go back
+  to where you were.</p>
+</section>
+
+<div class="branches">
+
+  <article class="branch">
+    <button type="button" aria-expanded="false" aria-controls="b1">
+      <b>A company has no logo</b>
+      <span>You see initials on a slide instead of a real mark</span>
+      <span class="chev" aria-hidden="true"></span>
+    </button>
+    <div class="body" id="b1" hidden>
+      <p>Nothing here guesses. A wrong logo is worse than an initials tile:
+      a tile reads as a small business, the wrong mark reads as someone who
+      does not check.</p>
+      <div class="cmd"><code>python3 missing_logos.py</code><button type="button" class="copy">Copy</button></div>
+      <p class="why">Who is missing one, most common first.</p>
+      <div class="cmd"><code>python3 find_logos.py</code><button type="button" class="copy">Copy</button></div>
+      <p class="why">Goes and finds candidate domains, then puts the uncertain ones in the dashboard for you to answer.</p>
+      <div class="cmd"><code>python3 find_logos.py <span class="flag">--accept</span> <span class="arg">"Arup"</span></code><button type="button" class="copy">Copy</button></div>
+      <p class="why">Yes, that candidate is them.</p>
+      <div class="cmd"><code>python3 find_logos.py <span class="flag">--set</span> <span class="arg">"ADP Consulting" adpconsulting.com</span></code><button type="button" class="copy">Copy</button></div>
+      <p class="why">No, it is this one instead. Use this when the finder's candidate is a real site belonging to somebody else.</p>
+      <div class="cmd"><code>python3 build_carousels.py <span class="flag">--rebuild</span></code><button type="button" class="copy">Copy</button></div>
+      <p class="why">Then rebuild, or the slides keep the tile.</p>
+    </div>
+  </article>
+
+  <article class="branch">
+    <button type="button" aria-expanded="false" aria-controls="b2">
+      <b>The website looks out of date</b>
+      <span>Wrong count, old date, or a change you made isn't there</span>
+      <span class="chev" aria-hidden="true"></span>
+    </button>
+    <div class="body" id="b2" hidden>
+      <p>Building and deploying are separate on purpose, so you can look at
+      the file before the world does. If the live site disagrees with your
+      disk, the deploy is what's missing.</p>
+      <div class="cmd"><code>python3 deploy_site.py <span class="flag">--check</span></code><button type="button" class="copy">Copy</button></div>
+      <p class="why">What is live against what is on your disk.</p>
+      <div class="cmd"><code>python3 deploy_site.py</code><button type="button" class="copy">Copy</button></div>
+      <p class="why">Push it.</p>
+      <p><strong>Then hard refresh.</strong> Cmd+Shift+R. A normal refresh
+      serves you the cached old file and you will think nothing happened.</p>
+    </div>
+  </article>
+
+  <article class="branch">
+    <button type="button" aria-expanded="false" aria-controls="b3">
+      <b>You posted from your phone</b>
+      <span>The dashboard still says a post is due when it already went out</span>
+      <span class="chev" aria-hidden="true"></span>
+    </button>
+    <div class="body" id="b3" hidden>
+      <p>Every other script assumes posts only reach Instagram through the
+      publisher. Post from your phone and the carousel stays in the queue and
+      its listings are never marked as used, so the same six jobs come back
+      on a future slide.</p>
+      <div class="cmd"><code>python3 ig_sync.py <span class="flag">--list</span></code><button type="button" class="copy">Copy</button></div>
+      <p class="why">What is actually on the account.</p>
+      <div class="cmd"><code>python3 ig_sync.py</code><button type="button" class="copy">Copy</button></div>
+      <p class="why">Files it properly: history, used listings, queue. It only ever adds, never deletes.</p>
+      <p>It matches posts to carousels by the job links in the caption, not
+      the caption text, because links are the one part nobody rewrites.</p>
+    </div>
+  </article>
+
+  <article class="branch">
+    <button type="button" aria-expanded="false" aria-controls="b4">
+      <b>The slide photos are getting samey</b>
+      <span>Same backgrounds coming round again</span>
+      <span class="chev" aria-hidden="true"></span>
+    </button>
+    <div class="body" id="b4" hidden>
+      <div class="cmd"><code>python3 more_backgrounds.py</code><button type="button" class="copy">Copy</button></div>
+      <p class="why">Pulls fresh bright photos into background pics/.</p>
+      <div class="cmd"><code>python3 more_backgrounds.py <span class="arg">"sunlit cafe laptop"</span></code><button type="button" class="copy">Copy</button></div>
+      <p class="why">Search for something specific. Bright, one subject, plenty of empty surface, because the white card covers the middle.</p>
+      <div class="cmd"><code>python3 build_carousels.py <span class="flag">--rebuild</span></code><button type="button" class="copy">Copy</button></div>
+      <p class="why">Rebuild so the new photos get used.</p>
+      <p>Unsplash only. Photos off Google Images are not safe to post on a
+      monetised account.</p>
+    </div>
+  </article>
+
+  <article class="branch">
+    <button type="button" aria-expanded="false" aria-controls="b5">
+      <b>Posting a reel instead</b>
+      <span>A video, not a carousel</span>
+      <span class="chev" aria-hidden="true"></span>
+    </button>
+    <div class="body" id="b5" hidden>
+      <div class="cmd"><code>python3 publish_reel.py <span class="arg">path/to/video.mp4</span></code><button type="button" class="copy">Copy</button></div>
+      <p>Put the caption in a .txt file of the same name next to the video.
+      Typing a caption into the terminal mangles emoji and eats quote marks,
+      which is a miserable way to find out your caption posted wrong.</p>
+      <p><strong>Slower than slides.</strong> Meta has to download and
+      transcode the video before it can publish, which is a minute or two
+      rather than a few seconds.</p>
+    </div>
+  </article>
+
+  <article class="branch">
+    <button type="button" aria-expanded="false" aria-controls="b6">
+      <b>You forgot a command</b>
+      <span>All of them, in one place</span>
+      <span class="chev" aria-hidden="true"></span>
+    </button>
+    <div class="body" id="b6" hidden>
+      <div class="cmd"><code>python3 commands.py</code><button type="button" class="copy">Copy</button></div>
+      <p class="why">Every command in the folder, grouped. Also prints at the bottom of every refresh and dashboard run.</p>
+      <div class="cmd"><code>python3 commands.py <span class="arg">logo</span></code><button type="button" class="copy">Copy</button></div>
+      <p class="why">Only the ones mentioning a word.</p>
+    </div>
+  </article>
+
+</div>
+</main>
+
+<footer>
+  <p>Every command runs from the same folder. The name ends in a real space,
+  so it has to be quoted or the shell splits it in two.</p>
+  <div class="cmd">
+    <code>cd ~/Desktop/<span class="arg">"job account "</span>/SeekSpider-main/pipeline_scripts</code>
+    <button type="button" class="copy">Copy</button>
+  </div>
+  <p style="margin-top:18px">Tokens live in <code>.env</code>, which is in
+  <code>.gitignore</code> because the slides repo is public. Nothing on this
+  page needs one typed anywhere.</p>
+</footer>
+
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  /* ---- open and close ---------------------------------------------------
+     One handler for both the spine and the branches. The panel is toggled
+     with the hidden property rather than a display style, so a screen reader
+     and the browser's own find-in-page agree with what is on screen. */
+  function wire(button, panel, host, cls) {
+    button.addEventListener("click", function () {
+      var open = host.classList.toggle(cls);
+      button.setAttribute("aria-expanded", open ? "true" : "false");
+      panel.hidden = !open;
+    });
+  }
+
+  document.querySelectorAll(".stage").forEach(function (stage) {
+    var b = stage.querySelector(".node");
+    var p = stage.querySelector(".detail");
+    if (b && p) { wire(b, p, stage, "open"); }
+  });
+
+  document.querySelectorAll(".branch").forEach(function (br) {
+    var b = br.querySelector("button");
+    var p = br.querySelector(".body");
+    if (b && p) { wire(b, p, br, "open"); }
+  });
+
+  /* ---- copy -------------------------------------------------------------
+     textContent of the <code>, so the syntax-colouring spans come out as
+     plain text and you paste a command rather than markup. */
+  document.querySelectorAll(".copy").forEach(function (btn) {
+    btn.addEventListener("click", function (e) {
+      e.stopPropagation();
+      var code = btn.parentNode.querySelector("code");
+      if (!code) { return; }
+      var text = code.textContent;
+
+      function done() {
+        var was = btn.textContent;
+        btn.textContent = "Copied";
+        btn.classList.add("done");
+        setTimeout(function () {
+          btn.textContent = was;
+          btn.classList.remove("done");
+        }, 1400);
+      }
+
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(done, fallback);
+      } else {
+        fallback();
+      }
+
+      function fallback() {
+        // execCommand is deprecated but it is the only thing that works from
+        // a file:// page in some browsers, which is exactly where this lives.
+        try {
+          var ta = document.createElement("textarea");
+          ta.value = text;
+          ta.setAttribute("readonly", "");
+          ta.style.position = "fixed";
+          ta.style.opacity = "0";
+          document.body.appendChild(ta);
+          ta.select();
+          document.execCommand("copy");
+          document.body.removeChild(ta);
+          done();
+        } catch (err) {
+          btn.textContent = "Select it";
+          setTimeout(function () { btn.textContent = "Copy"; }, 1600);
+        }
+      }
+    });
+  });
+
+  /* ---- modes ----------------------------------------------------------- */
+  var all  = document.getElementById("mode-all");
+  var bare = document.getElementById("mode-bare");
+  var exp  = document.getElementById("expand");
+
+  function setMode(isBare) {
+    document.body.classList.toggle("bare", isBare);
+    all.setAttribute("aria-pressed", isBare ? "false" : "true");
+    bare.setAttribute("aria-pressed", isBare ? "true" : "false");
+  }
+  all.addEventListener("click", function () { setMode(false); });
+  bare.addEventListener("click", function () { setMode(true); });
+
+  var opened = false;
+  exp.addEventListener("click", function () {
+    opened = !opened;
+    setMode(false);
+    document.querySelectorAll(".stage, .branch").forEach(function (host) {
+      var b = host.querySelector("button");
+      var p = host.querySelector(".detail, .body");
+      if (!b || !p) { return; }
+      host.classList.toggle("open", opened);
+      b.setAttribute("aria-expanded", opened ? "true" : "false");
+      p.hidden = !opened;
+    });
+    exp.textContent = opened ? "Close everything" : "Open everything";
+  });
+})();
+</script>
+</body>
+</html>

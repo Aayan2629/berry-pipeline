@@ -1,0 +1,38 @@
+# Environment variables
+.env
+.env.*
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# IDE
+.idea/
+.vscode/
+
+# Local settings
+/logs/
+
+# Persistent data (SQLite database)
+/data/
+
+# NOTE: /output/ is deliberately NOT ignored. berry.yml commits the
+# crawl folders back so the next run knows what it already saw, and
+# prunes them to the newest 20 each time.
+
+# Snapshot of what is on the Instagram account (ig_sync.py). Regenerated
+# on every run, so there is nothing to gain from committing it.
+pipeline_scripts/ig_posts.json
+
+# Rendered slides. Built fresh on every run and pushed to berry-slides for
+# Instagram to fetch, so committing them here would just grow the repo by a
+# few megabytes a day for nothing.
+pipeline_scripts/queue_carousels/
+pipeline_scripts/posted_carousels/
+pipeline_scripts/old_carousels/
+pipeline_scripts/preview.html
+pipeline_scripts/dashboard.html
+
+# macOS folder metadata
+.DS_Store
