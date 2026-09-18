@@ -218,41 +218,67 @@ def retire(carousel):
               f"     Move it yourself or it may be posted again.")
 
 
+# Meta hands back HTTP 500 with "is_transient": true more often than you would
+# like. It is their side, not yours, and the reply literally asks you to retry.
+# Without this, one flaky second kills the whole post -- and on an unattended
+# daily run that is a silently missed day nobody notices until Thursday.
+RETRY_WAITS = (5, 15, 40)          # seconds to wait before each retry
+
+
+def _worth_retrying(status, detail):
+    """Their problem rather than ours, so trying again might work."""
+    if status == 0:                          # never reached them at all
+        return True
+    if status >= 500 or status == 429:       # their error, or rate limited
+        return True
+    return '"is_transient":true' in (detail or "").replace(" ", "")
+
+
+def _call(method, path, params, what, allow_fail=False):
+    """One call to Meta, retried while the failure looks transient, with the
+    token kept out of every error message."""
+    for attempt in range(len(RETRY_WAITS) + 1):
+        status, detail = 0, ""
+        try:
+            if method == "post":
+                r = requests.post(f"{API}/{path}", data=params, timeout=60)
+            else:
+                # A GET puts the token in the URL, and requests puts the URL
+                # in every exception it raises -- so an ordinary network blip
+                # would print your access token across the terminal. Hence the
+                # bare exception name below and nothing else.
+                r = requests.get(f"{API}/{path}", params=params, timeout=60)
+            status = r.status_code
+            if status == 200:
+                return r.json()
+            detail = r.text
+            if "access_token" in params:
+                detail = detail.replace(params["access_token"], "***")
+        except requests.exceptions.RequestException as e:
+            detail = type(e).__name__
+
+        if attempt < len(RETRY_WAITS) and _worth_retrying(status, detail):
+            wait = RETRY_WAITS[attempt]
+            print(f"  {what}: {'no reply' if not status else f'HTTP {status}'}"
+                  f" -- looks transient, retrying in {wait}s"
+                  f" ({attempt + 1}/{len(RETRY_WAITS)})")
+            time.sleep(wait)
+            continue
+
+        if allow_fail:
+            return {"_error": detail[:500], "_http": status}
+        if status == 0:
+            sys.exit(f"\n{what} failed: couldn't reach Instagram "
+                     f"({detail}). Check you are online.")
+        sys.exit(f"\n{what} failed (HTTP {status}):\n{detail[:500]}")
+
+
 def api_post(path, params, what, allow_fail=False):
-    """One call to Meta, with the token kept out of any error message."""
-    try:
-        r = requests.post(f"{API}/{path}", data=params, timeout=60)
-    except requests.exceptions.RequestException as e:
-        if allow_fail:
-            return {"_error": f"{type(e).__name__}", "_http": 0}
-        sys.exit(f"\n{what} failed: couldn't reach Instagram "
-                 f"({type(e).__name__}). Check you are online.")
-    if r.status_code != 200:
-        detail = r.text
-        if "access_token" in params:
-            detail = detail.replace(params["access_token"], "***")
-        if allow_fail:
-            return {"_error": detail[:500], "_http": r.status_code}
-        sys.exit(f"\n{what} failed (HTTP {r.status_code}):\n{detail[:500]}")
-    return r.json()
+    return _call("post", path, params, what, allow_fail)
 
 
 def api_get(path, params, what):
-    # A GET puts the token in the URL, and requests puts the URL in every
-    # exception it raises -- so an ordinary network blip would print your
-    # access token across the terminal. Catch it and say nothing useful to
-    # anyone reading over your shoulder.
-    try:
-        r = requests.get(f"{API}/{path}", params=params, timeout=60)
-    except requests.exceptions.RequestException as e:
-        sys.exit(f"\n{what} failed: couldn't reach Instagram "
-                 f"({type(e).__name__}). Check you are online.")
-    if r.status_code != 200:
-        detail = r.text
-        if "access_token" in params:
-            detail = detail.replace(params["access_token"], "***")
-        sys.exit(f"\n{what} failed (HTTP {r.status_code}):\n{detail[:500]}")
-    return r.json()
+    return _call("get", path, params, what)
 
 
 def wait_ready(container_id, token, label, timeout=180):
