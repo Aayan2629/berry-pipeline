@@ -54,6 +54,7 @@ except ImportError:
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(os.path.dirname(HERE))
 sys.path.insert(0, ROOT)
+sys.path.insert(0, os.path.dirname(HERE))   # repo root, for GitHub Actions
 sys.path.insert(0, HERE)
 
 from all_jobs import (categorize, is_internship, job_track,      # noqa: E402

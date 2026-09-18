@@ -43,6 +43,7 @@ from datetime import datetime
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(os.path.dirname(HERE))          # the "job account " folder
 sys.path.insert(0, ROOT)
+sys.path.insert(0, os.path.dirname(HERE))   # repo root, for GitHub Actions
 
 from all_jobs import (categorize, is_internship, job_track, job_age_days,
                       MAX_AGE_DAYS, load_dead_listings)              # noqa: E402

@@ -196,6 +196,7 @@ POSTING_DAY = {
 # Reuse the category + internship-vs-graduate logic from all_jobs.py so the
 # carousels match the website exactly.
 sys.path.insert(0, os.path.abspath(os.path.join(HERE, "..", "..")))
+sys.path.insert(0, os.path.abspath(os.path.join(HERE, "..")))
 from all_jobs import (categorize, job_track, is_internship,
                       job_age_days, MAX_AGE_DAYS,
                       load_dead_listings)
