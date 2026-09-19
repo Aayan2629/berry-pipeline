@@ -490,12 +490,6 @@ TEMPLATE = """<!DOCTYPE html>
   .card {
     position: relative; background: var(--card); border: 1px solid var(--line);
     border-radius: var(--r); padding: 18px 18px 16px;
-    /* The browser skips layout and paint for cards that are off screen, which
-       is what keeps a 200-card page scrolling smoothly. The intrinsic size is
-       the measured average card (min 161, median 182, max 223), so the scrollbar
-       barely moves; "auto" means the real height is remembered after first paint. */
-    content-visibility: auto;
-    contain-intrinsic-size: auto 188px;
     display: flex; flex-direction: column; gap: 12px;
     box-shadow: 0 1px 0 rgba(28,21,24,.03);
     transition: transform var(--dur) var(--ease), border-color var(--dur) var(--ease),
@@ -559,13 +553,10 @@ TEMPLATE = """<!DOCTYPE html>
   .ship { position: relative; display: inline-block; }
   .flight { display: none; }
 
-  /* Only the first rows are hidden for the entrance. Hiding all 200+ meant
-     every off-screen card sat at opacity 0 waiting its turn, which is what
-     left grey gaps if you scrolled straight after a filter change. */
-  .grid.reveal .card:nth-child(-n+16) { opacity: 0; transform: translateY(10px); }
+  .grid.reveal .card { opacity: 0; transform: translateY(10px); }
   @media (prefers-reduced-motion: reduce) {
     html { scroll-behavior: auto; }
-    .grid.reveal .card:nth-child(-n+16) { opacity: 1; transform: none; }
+    .grid.reveal .card { opacity: 1; transform: none; }
     * { transition-duration: .01ms !important; }
   }
 
@@ -867,10 +858,7 @@ if (!reduced) {
 function stagger() {
   if (reduced || !grid.animate) return;
   grid.classList.add("reveal");
-  // Only the cards you can actually see are worth animating. Handing the
-  // browser 200+ Web Animations at once costs far more than the effect is
-  // worth, and every one of them holds its card invisible until it runs.
-  const cards = [...grid.children].slice(0, 16);
+  const cards = [...grid.children];
   cards.forEach((el, i) => {
     el.animate(
       [{opacity:0, transform:"translateY(14px)"}, {opacity:1, transform:"none"}],
