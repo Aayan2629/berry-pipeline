@@ -96,6 +96,17 @@ jobs:
           } > .env
           echo "wrote .env with $(wc -l < .env) keys"
 
+      - name: Record status for the dashboard
+        # The dashboard is a static page on Netlify, so it cannot read a
+        # GitHub secret. The one non-secret fact it needs -- when the
+        # Instagram token was last refreshed -- gets written here and rides
+        # along with the state commit at the end of the run.
+        env:
+          IG_TOKEN_OBTAINED: ${{ secrets.IG_TOKEN_OBTAINED }}
+        run: |
+          python -c "import json,os,datetime; json.dump({'ig_token_obtained': os.environ.get('IG_TOKEN_OBTAINED',''), 'updated_at': datetime.datetime.now(datetime.timezone.utc).isoformat(timespec='seconds')}, open('pipeline_scripts/status.json','w'), indent=2)"
+          cat pipeline_scripts/status.json
+
       - name: Clone berry-slides
         # upload_slides.py pushes the JPEGs into this clone and Meta fetches
         # them from raw.githubusercontent. It expects the clone to sit beside

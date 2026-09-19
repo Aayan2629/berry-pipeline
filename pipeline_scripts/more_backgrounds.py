@@ -51,22 +51,89 @@ OUT = os.path.join(HERE, "background pics")
 # 16 queries x the default --per (6) = ~96 in one bare run -- enough variety
 # that the carousels stop visibly repeating the same handful of photos.
 DEFAULT_QUERIES = [
+    # The house look: bright, warm, uncluttered. Slides sit a tint of 0.14
+    # over these and then put text on top, so anything busy or high-contrast
+    # fights the words. Prefer soft light, plain surfaces, shallow depth.
+
+    # --- desks and workspaces -------------------------------------------
     "bright sunlit desk laptop",
     "minimal white desk notebook",
-    "modern office window daylight",
-    "cafe table laptop morning light",
+    "plant desk workspace minimal",
+    "desk flowers laptop bright",
+    "laptop coffee cup wooden table",
+    "clean desk morning sunlight",
+    "wooden desk soft shadow",
+    "workspace linen neutral tones",
+    "minimal home office beige",
+    "desk lamp warm light minimal",
+
+    # --- study, library, campus -----------------------------------------
     "university campus sunny",
     "student notebook coffee bright",
-    "coffee shop laptop working",
     "cozy library reading nook",
-    "plant desk workspace minimal",
-    "notebook pen coffee flatlay",
     "bookshelf study room bright",
     "open notebook pen desk sunlight",
-    "coworking space bright window",
-    "laptop coffee cup wooden table",
     "campus courtyard sunny day",
-    "desk flowers laptop bright",
+    "library window natural light",
+    "study desk books warm light",
+    "lecture hall empty bright",
+    "campus architecture sunlight",
+
+    # --- cafes ------------------------------------------------------------
+    "cafe table laptop morning light",
+    "coffee shop laptop working",
+    "coffee cup marble table",
+    "cafe window seat morning",
+    "latte flatlay neutral",
+
+    # --- offices and coworking -------------------------------------------
+    "modern office window daylight",
+    "coworking space bright window",
+    "glass office building sky",
+    "office lobby minimal light",
+    "meeting room bright empty",
+
+    # --- city and architecture -------------------------------------------
+    "sydney harbour morning",
+    "sydney skyline sunrise",
+    "city skyline soft haze",
+    "modern architecture minimal facade",
+    "glass tower blue sky",
+    "concrete architecture soft light",
+    "city street morning light",
+    "bridge architecture minimal",
+
+    # --- texture and surface ----------------------------------------------
+    "paper texture cream minimal",
+    "linen fabric texture neutral",
+    "concrete wall soft texture",
+    "marble texture white subtle",
+    "plaster wall warm neutral",
+    "kraft paper texture plain",
+
+    # --- light, gradient, abstract ---------------------------------------
+    "soft gradient pastel blur",
+    "warm light leak abstract",
+    "sunlight through curtain",
+    "soft shadow on wall",
+    "golden hour light wall",
+    "blurred bokeh warm tones",
+    "abstract pastel minimal",
+    "colour gradient smooth peach",
+
+    # --- calm nature -------------------------------------------------------
+    "clear sky soft clouds",
+    "pastel sunset sky minimal",
+    "calm ocean horizon soft",
+    "eucalyptus leaves soft light",
+    "minimal landscape muted",
+    "sand texture soft light",
+
+    # --- stationery and flatlay --------------------------------------------
+    "notebook pen coffee flatlay",
+    "stationery flatlay minimal neutral",
+    "planner desk flatlay bright",
+    "pen paper clean flatlay",
 ]
 
 UA = ("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 "

@@ -1,0 +1,306 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>berry control</title>
+<style>
+  :root{
+    --bg:#f7f3f1; --bg-2:#efe8e6; --card:#fff; --ink:#1c1518; --ink-2:#5c5258;
+    --muted:#8a7f86; --line:#eadfe4; --line-soft:#f0e8eb;
+    --berry:#c42d5e; --teal:#1a6c70; --rust:#b5522c; --ok:#1a7a4c;
+    --r:16px;
+    --shadow:0 1px 2px rgba(28,21,24,.04), 0 12px 32px -18px rgba(28,21,24,.18);
+    --dur:.22s; --ease:cubic-bezier(.22,.8,.28,1);
+  }
+  @media (prefers-color-scheme:dark){
+    :root:not([data-theme="light"]){
+      --bg:#141013; --bg-2:#1b1619; --card:#1f1a1d; --ink:#f4eef0; --ink-2:#c3b7bc;
+      --muted:#8d8086; --line:#2e2529; --line-soft:#261f23;
+      --berry:#f06a93; --teal:#4fb3b8; --rust:#e08a63; --ok:#54c78c;
+      --shadow:0 1px 2px rgba(0,0,0,.3), 0 12px 32px -18px rgba(0,0,0,.7);
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg:#141013; --bg-2:#1b1619; --card:#1f1a1d; --ink:#f4eef0; --ink-2:#c3b7bc;
+    --muted:#8d8086; --line:#2e2529; --line-soft:#261f23;
+    --berry:#f06a93; --teal:#4fb3b8; --rust:#e08a63; --ok:#54c78c;
+    --shadow:0 1px 2px rgba(0,0,0,.3), 0 12px 32px -18px rgba(0,0,0,.7);
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0; background:var(--bg); color:var(--ink);
+    font:15px/1.5 ui-sans-serif,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:940px; margin:0 auto; padding:28px 16px 64px}
+
+  header{display:flex; align-items:baseline; gap:12px; flex-wrap:wrap; margin-bottom:6px}
+  h1{font-size:24px; letter-spacing:-.02em; margin:0; font-weight:650}
+  h1 .dot{color:var(--berry)}
+  .sub{color:var(--muted); font-size:13px}
+  .refresh{margin-left:auto; font-size:12px; color:var(--muted);
+    background:none; border:1px solid var(--line); color:var(--ink-2);
+    padding:5px 11px; border-radius:99px; cursor:pointer; transition:border-color var(--dur) var(--ease)}
+  .refresh:hover{border-color:var(--berry)}
+
+  h2{font-size:12px; text-transform:uppercase; letter-spacing:.09em;
+     color:var(--muted); font-weight:600; margin:32px 0 10px}
+
+  .card{background:var(--card); border:1px solid var(--line); border-radius:var(--r);
+        box-shadow:var(--shadow); padding:18px 20px}
+
+  /* ---- hero status ---- */
+  .hero{display:flex; gap:18px; align-items:flex-start; flex-wrap:wrap}
+  .beacon{width:14px; height:14px; border-radius:50%; flex:0 0 auto; margin-top:5px;
+          background:var(--muted); box-shadow:0 0 0 4px rgba(138,127,134,.14)}
+  .beacon.ok{background:var(--ok); box-shadow:0 0 0 4px rgba(26,122,76,.16)}
+  .beacon.bad{background:var(--berry); box-shadow:0 0 0 4px rgba(196,45,94,.16)}
+  .beacon.warn{background:var(--rust); box-shadow:0 0 0 4px rgba(181,82,44,.16)}
+  .hero-main{flex:1 1 240px; min-width:0}
+  .hero-title{font-size:19px; font-weight:600; letter-spacing:-.01em}
+  .hero-note{color:var(--ink-2); font-size:13.5px; margin-top:3px}
+  .hero-note code{background:var(--bg-2); padding:1px 5px; border-radius:5px; font-size:12px}
+
+  .runs{display:flex; gap:5px; margin-top:16px; flex-wrap:wrap}
+  .run{width:22px; height:26px; border-radius:5px; background:var(--line);
+       position:relative; cursor:default}
+  .run.s{background:var(--ok)} .run.f{background:var(--berry)}
+  .run.c{background:var(--muted)} .run.r{background:var(--rust)}
+  .run:hover::after{
+    content:attr(data-t); position:absolute; bottom:calc(100% + 7px); left:50%;
+    transform:translateX(-50%); background:var(--ink); color:var(--bg);
+    font-size:11px; line-height:1.35; padding:5px 8px; border-radius:7px;
+    white-space:pre; z-index:5; box-shadow:var(--shadow)}
+
+  /* ---- week ---- */
+  .week{display:grid; grid-template-columns:repeat(7,1fr); gap:7px}
+  .day{background:var(--card); border:1px solid var(--line); border-radius:11px;
+       padding:9px 6px; text-align:center; min-height:82px;
+       display:flex; flex-direction:column; gap:3px; align-items:center; justify-content:flex-start}
+  .day.today{border-color:var(--berry); box-shadow:0 0 0 2px rgba(196,45,94,.12)}
+  .day .d{font-size:11px; font-weight:600; color:var(--muted); letter-spacing:.04em}
+  .day .n{font-size:16px; font-weight:600; line-height:1.1}
+  .day .tag{font-size:9.5px; line-height:1.25; font-weight:600; padding:2px 5px;
+            border-radius:5px; margin-top:2px}
+  .tag.tech{background:rgba(26,108,112,.14); color:var(--teal)}
+  .tag.biz{background:rgba(196,45,94,.13); color:var(--berry)}
+  .tag.eng{background:rgba(181,82,44,.14); color:var(--rust)}
+  .day .rest{font-size:16px; color:var(--line); margin-top:6px}
+
+  /* ---- queue ---- */
+  .queue{display:grid; grid-template-columns:repeat(auto-fill,minmax(210px,1fr)); gap:12px}
+  .q{background:var(--card); border:1px solid var(--line); border-radius:13px;
+     overflow:hidden; display:flex; flex-direction:column}
+  .q img{width:100%; aspect-ratio:1; object-fit:cover; display:block; background:var(--bg-2)}
+  .q .meta{padding:10px 12px 12px}
+  .q .nm{font-size:13px; font-weight:600; line-height:1.3; word-break:break-word}
+  .q .when{font-size:11.5px; color:var(--muted); margin-top:3px}
+
+  /* ---- stats ---- */
+  .stats{display:grid; grid-template-columns:repeat(auto-fit,minmax(132px,1fr)); gap:11px}
+  .stat{background:var(--card); border:1px solid var(--line); border-radius:13px; padding:15px 16px}
+  .stat .v{font-size:27px; font-weight:650; letter-spacing:-.025em; line-height:1}
+  .stat .k{font-size:11.5px; color:var(--muted); margin-top:5px; line-height:1.35}
+  .stat.accent .v{color:var(--berry)}
+
+  /* ---- token ---- */
+  .bar{height:7px; background:var(--bg-2); border-radius:99px; overflow:hidden; margin-top:11px}
+  .bar i{display:block; height:100%; border-radius:99px; background:var(--ok);
+         transition:width .5s var(--ease)}
+  .bar i.warn{background:var(--rust)} .bar i.bad{background:var(--berry)}
+
+  .links{display:flex; gap:9px; flex-wrap:wrap; margin-top:12px}
+  .links a{font-size:12.5px; color:var(--ink-2); text-decoration:none;
+    border:1px solid var(--line); padding:6px 12px; border-radius:99px;
+    transition:border-color var(--dur) var(--ease), color var(--dur) var(--ease)}
+  .links a:hover{border-color:var(--berry); color:var(--berry)}
+
+  .empty{color:var(--muted); font-size:13.5px; padding:6px 2px; grid-column:1/-1}
+  footer{margin-top:40px; color:var(--muted); font-size:11.5px; text-align:center}
+  @media (max-width:560px){
+    .week{grid-template-columns:repeat(4,1fr)}
+    .wrap{padding:22px 14px 48px}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <h1>berry<span class="dot">.</span></h1>
+    <span class="sub" id="clock">—</span>
+    <button class="refresh" id="rf">refresh</button>
+  </header>
+
+  <h2>Pipeline</h2>
+  <div class="card">
+    <div class="hero">
+      <span class="beacon" id="beacon"></span>
+      <div class="hero-main">
+        <div class="hero-title" id="st-title">checking…</div>
+        <div class="hero-note" id="st-note">asking GitHub how last night went</div>
+      </div>
+    </div>
+    <div class="runs" id="runs"></div>
+    <div class="links">
+      <a href="https://github.com/Aayan2629/berry-pipeline/actions" target="_blank" rel="noopener">Actions</a>
+      <a href="https://internberry.netlify.app/" target="_blank" rel="noopener">the site</a>
+      <a href="https://www.instagram.com/" target="_blank" rel="noopener">Instagram</a>
+    </div>
+  </div>
+
+  <h2>This week <span style="text-transform:none;letter-spacing:0">(Sydney)</span></h2>
+  <div class="week" id="week"></div>
+
+  <h2>Waiting to post</h2>
+  <div class="queue" id="queue"><div class="empty">loading…</div></div>
+
+  <h2>Listings</h2>
+  <div class="stats" id="stats"></div>
+
+  <h2>Instagram token</h2>
+  <div class="card">
+    <div class="hero-title" id="tok-title" style="font-size:16px">—</div>
+    <div class="hero-note" id="tok-note"></div>
+    <div class="bar"><i id="tok-bar" style="width:0%"></i></div>
+  </div>
+
+  <footer id="foot">reads straight from the repo &amp; the Actions API — nothing cached</footer>
+</div>
+
+<script>
+const OWNER='Aayan2629', REPO='berry-pipeline', SLIDES='berry-slides';
+const RAW=`https://raw.githubusercontent.com/${OWNER}/${REPO}/main`;
+const SLIDE_RAW=`https://raw.githubusercontent.com/${OWNER}/${SLIDES}/main/slides`;
+const API=`https://api.github.com/repos/${OWNER}/${REPO}`;
+const SCHEDULE={1:['Technology, Data & AI','tech'],4:['Business, Commerce, Marketing & Finance','biz'],6:['Engineering','eng']};
+const $=id=>document.getElementById(id);
+
+const jget=async u=>{const r=await fetch(u,{cache:'no-store'});if(!r.ok)throw new Error(r.status);return r.json()};
+const ago=d=>{const s=(Date.now()-new Date(d))/1e3;
+  if(s<90)return'just now'; if(s<5400)return Math.round(s/60)+' min ago';
+  if(s<172800)return Math.round(s/3600)+' hr ago'; return Math.round(s/86400)+' days ago'};
+const syd=(o)=>new Intl.DateTimeFormat('en-AU',{timeZone:'Australia/Sydney',...o});
+
+/* ---------- pipeline ---------- */
+async function pipeline(){
+  try{
+    const d=await jget(`${API}/actions/workflows/berry.yml/runs?per_page=14`);
+    const runs=d.workflow_runs||[];
+    if(!runs.length){$('st-title').textContent='no runs yet';$('st-note').textContent='the workflow has never fired';return}
+    const last=runs[0];
+    const okRun=runs.find(r=>r.conclusion==='success');
+    const cls={success:'s',failure:'f',cancelled:'c'};
+    $('runs').innerHTML=runs.slice().reverse().map(r=>{
+      const c=cls[r.conclusion]||(r.status!=='completed'?'r':'c');
+      const t=`${r.conclusion||r.status}\n${syd({dateStyle:'medium',timeStyle:'short'}).format(new Date(r.created_at))}`;
+      return `<span class="run ${c}" data-t="${t.replace(/"/g,'&quot;')}"></span>`}).join('');
+
+    const hrs=(Date.now()-new Date(last.created_at))/36e5;
+    const good=last.conclusion==='success';
+    const stale=hrs>30;
+    $('beacon').className='beacon '+(good&&!stale?'ok':good?'warn':'bad');
+    if(last.status!=='completed'){
+      $('st-title').textContent='running now';
+      $('st-note').textContent='started '+ago(last.created_at);
+    }else if(good){
+      const mins=Math.max(1,Math.round((new Date(last.updated_at)-new Date(last.created_at))/6e4));
+      $('st-title').textContent = stale ? 'last run worked, but it is overdue' : 'everything ran';
+      $('st-note').innerHTML = `finished ${ago(last.updated_at)} in ${mins} min`
+        + (stale?` — nothing since, and it should run daily`:'');
+    }else{
+      $('st-title').textContent='last run failed';
+      const okTxt = okRun ? `last good one was ${ago(okRun.updated_at)}` : 'no successful run on record';
+      $('st-note').innerHTML=`failed ${ago(last.updated_at)} — ${okTxt}. `
+        + `<a href="${last.html_url}" target="_blank" rel="noopener">open the log</a>`;
+    }
+  }catch(e){
+    $('beacon').className='beacon warn';
+    $('st-title').textContent='could not reach the Actions API';
+    $('st-note').innerHTML='GitHub rate-limits anonymous requests to 60/hour per IP. '
+      +'<a href="https://github.com/'+OWNER+'/'+REPO+'/actions" target="_blank" rel="noopener">check manually</a>';
+  }
+}
+
+/* ---------- week ---------- */
+function week(){
+  const todayName=syd({weekday:'short'}).format(new Date());
+  const names=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  let html='';
+  for(let i=0;i<7;i++){
+    const d=new Date(); d.setDate(d.getDate()+i);
+    const wd=syd({weekday:'short'}).format(d);
+    const dn=syd({day:'numeric'}).format(d);
+    const idx=names.indexOf(wd);
+    const s=SCHEDULE[idx];
+    html+=`<div class="day${i===0?' today':''}">
+      <span class="d">${wd.toUpperCase()}</span><span class="n">${dn}</span>
+      ${s?`<span class="tag ${s[1]}">${s[0].split(',')[0]}</span>`:'<span class="rest">·</span>'}
+    </div>`;
+  }
+  $('week').innerHTML=html;
+}
+
+/* ---------- queue + stats + token ---------- */
+async function state(){
+  const grab=async(f,fb)=>{try{return await jget(`${RAW}/pipeline_scripts/${f}`)}catch(e){return fb}};
+  const [seen,hist,posted,status,statusJson]=await Promise.all([
+    grab('seen_carousels.json',[]), grab('posted_history.json',{posts:[]}),
+    grab('posted_jobs.json',[]), grab('listing_status.json',{}), grab('status.json',null)
+  ]);
+
+  const done=new Set((hist.posts||[]).map(p=>p.carousel));
+  const waiting=(seen||[]).filter(c=>!done.has(c));
+  $('queue').innerHTML = waiting.length ? waiting.map(c=>{
+    const pretty=c.replace(/-/g,' ').replace(/\bpart(\d)/,'· part $1');
+    return `<div class="q">
+      <img loading="lazy" src="${SLIDE_RAW}/${encodeURIComponent(c)}/slide_01_cover.jpg"
+           alt="" onerror="this.style.display='none'">
+      <div class="meta"><div class="nm">${pretty}</div>
+      <div class="when">queued</div></div></div>`}).join('')
+    : '<div class="empty">nothing waiting — the queue is clear</div>';
+
+  const vals=Object.values(status||{});
+  const active=vals.filter(v=>v.status==='Active').length;
+  const closed=vals.length-active;
+  const tiles=[
+    [vals.length,'listings tracked'],
+    [active,'still open'],
+    [closed,'closed since'],
+    [(posted||[]).length,'posted to Instagram',1],
+    [(hist.posts||[]).length,'carousels out'],
+    [waiting.length,'waiting'],
+  ];
+  $('stats').innerHTML=tiles.map(([v,k,a])=>
+    `<div class="stat${a?' accent':''}"><div class="v">${v}</div><div class="k">${k}</div></div>`).join('');
+
+  /* token */
+  const obtained = statusJson && statusJson.ig_token_obtained;
+  if(!obtained){
+    $('tok-title').textContent='expiry unknown';
+    $('tok-note').innerHTML='no <code>status.json</code> in the repo yet — the workflow writes it on its next run';
+    $('tok-bar').style.width='0%';
+  }else{
+    const left=Math.round(60-(Date.now()-new Date(obtained))/864e5);
+    const pct=Math.max(0,Math.min(100,left/60*100));
+    $('tok-title').textContent=`${left} days left`;
+    $('tok-note').textContent=`refreshed ${obtained} · renews automatically once it drops under 25`;
+    const b=$('tok-bar'); b.style.width=pct+'%';
+    b.className = left<10?'bad':left<25?'warn':'';
+  }
+}
+
+async function load(){
+  $('clock').textContent=syd({weekday:'long',day:'numeric',month:'short',
+    hour:'numeric',minute:'2-digit'}).format(new Date())+' Sydney';
+  await Promise.all([pipeline(),state()]);
+  week();
+}
+$('rf').onclick=load;
+load();
+setInterval(load,120000);
+</script>
+</body>
+</html>
