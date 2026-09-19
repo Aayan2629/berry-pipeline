@@ -126,6 +126,10 @@ jobs:
           python publish_to_instagram.py
 
       - name: Throw away old crawls
+        # always(): a refused post must not throw away ten minutes of
+        # scraping. The crawls and the site state are worth keeping whatever
+        # Instagram said.
+        if: always()
         # Every scrape writes a new dated folder and build_carousels.py reads
         # all of them. Left alone that grows forever and every run gets
         # slower. Twenty is far more history than anything here looks at.
@@ -135,6 +139,7 @@ jobs:
           echo "$(ls -1 | wc -l) crawl(s) kept"
 
       - name: Commit the state back
+        if: always()
         # The runner is deleted when the job ends, so anything not committed
         # is forgotten -- and "what have I already posted" being forgotten
         # means posting it again tomorrow.

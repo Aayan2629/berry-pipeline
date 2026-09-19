@@ -48,6 +48,7 @@ import os
 import sys
 import time
 from datetime import datetime, timedelta
+from zoneinfo import ZoneInfo
 
 try:
     import requests
@@ -73,6 +74,22 @@ SCHEDULE = {
 }
 DAY_NAMES = ["Monday", "Tuesday", "Wednesday", "Thursday",
              "Friday", "Saturday", "Sunday"]
+
+
+# The schedule above is in SYDNEY days. now() gives whatever clock
+# the machine has: on the Mac that is Sydney, but on a GitHub runner it is
+# UTC, and the cron fires at 21:20 UTC -- 7:20am the NEXT day in Sydney. Left
+# alone, every post landed a day late: Monday's tech carousel went out Tuesday.
+#
+# Naive rather than timezone-aware on purpose. Every timestamp already in
+# posted_history.json was written naive, and subtracting an aware datetime
+# from a naive one raises TypeError.
+SYDNEY = ZoneInfo("Australia/Sydney")
+
+
+def now():
+    """Sydney wall-clock time, as a naive datetime."""
+    return datetime.now(SYDNEY).replace(tzinfo=None)
 
 # How far back to look for a category whose leftover parts still need posting.
 # Two days covers "Finance had 12 new roles on Thursday, so parts 2 and 3 go
@@ -109,7 +126,7 @@ def check_token_age(env):
     if not obtained:
         return
     try:
-        age = (datetime.now() - datetime.fromisoformat(obtained)).days
+        age = (now() - datetime.fromisoformat(obtained)).days
     except ValueError:
         return
     left = TOKEN_LIFETIME_DAYS - age
@@ -134,7 +151,7 @@ def days_since_last_post(history):
     if not history["posts"]:
         return None
     last = max(p["posted_at"] for p in history["posts"])
-    return (datetime.now() - datetime.fromisoformat(last)).days
+    return (now() - datetime.fromisoformat(last)).days
 
 
 def carousels_for(category):
@@ -166,7 +183,7 @@ def pick_for_today(today=None):
     category that still has parts left over, which is how a category with
     more than five new listings spills onto the following day.
     """
-    today = today or datetime.now()
+    today = today or now()
     for back in range(OVERFLOW_LOOKBACK_DAYS + 1):
         day = today - timedelta(days=back)
         category = SCHEDULE.get(day.weekday())
@@ -467,8 +484,8 @@ def main():
                     carousel, category, back = waiting[0], cat, 0
                     break
         if not carousel:
-            today = DAY_NAMES[datetime.now().weekday()]
-            due = SCHEDULE.get(datetime.now().weekday())
+            today = DAY_NAMES[now().weekday()]
+            due = SCHEDULE.get(now().weekday())
             if due:
                 print(f"{today} is {due} day, but there is nothing waiting "
                       f"in the queue for it.")
@@ -525,7 +542,7 @@ def main():
         history["posts"].append({
             "carousel": carousel,
             "category": category or "Unknown",
-            "posted_at": datetime.now().isoformat(timespec="seconds"),
+            "posted_at": now().isoformat(timespec="seconds"),
             "media_id": post_id,
         })
         save_history(history)
@@ -534,7 +551,7 @@ def main():
         print(f"\n  LIVE -- https://www.instagram.com/berry.internships.syd/")
         print(f"  media id: {post_id}")
 
-        nxt = datetime.now() + timedelta(days=1)
+        nxt = now() + timedelta(days=1)
         for _ in range(7):
             if SCHEDULE.get(nxt.weekday()):
                 print(f"  next scheduled: {nxt.strftime('%a %d %b')} "
