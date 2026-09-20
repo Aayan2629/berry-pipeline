@@ -132,9 +132,40 @@ jobs:
         # Exits 0 with "nothing due today" on the four non-posting days, so a
         # quiet day is a green tick rather than a red cross you learn to
         # ignore.
+        id: post
         run: |
           cd pipeline_scripts
-          python publish_to_instagram.py
+          set -o pipefail
+          python publish_to_instagram.py 2>&1 | tee "$RUNNER_TEMP/post_output.txt"
+
+      - name: Record why the post did or did not go out
+        if: always()
+        # An Actions log can only be read by someone with the repo open, and it
+        # expires. "Why has nothing posted since Tuesday?" has to be answerable
+        # from the dashboard alone, so the tail of the publish lands in
+        # status.json and rides home with the state commit below.
+        env:
+          POST_OUTCOME: ${{ steps.post.outcome }}
+        run: |
+          python - <<'PY'
+          import json, os, re, pathlib, datetime
+          raw = pathlib.Path(os.environ["RUNNER_TEMP"]) / "post_output.txt"
+          text = raw.read_text(errors="replace") if raw.exists() else ""
+          # belt and braces: the scripts redact already, but never let a token near a
+          # file that gets committed to a public repo.
+          text = re.sub(r"(IGA[A-Za-z0-9_-]{20,}|ghp_[A-Za-z0-9_]{20,}|nfp_[A-Za-z0-9_]{20,})", "***", text)
+          tail = [l.rstrip() for l in text.splitlines() if l.strip()][-14:]
+          p = pathlib.Path("pipeline_scripts/status.json")
+          d = json.loads(p.read_text()) if p.exists() else {}
+          d["last_post"] = {
+              "outcome": os.environ.get("POST_OUTCOME") or "unknown",
+              "at": datetime.datetime.now(datetime.timezone.utc).isoformat(timespec="seconds"),
+              "log": tail,
+          }
+          p.write_text(json.dumps(d, indent=2))
+          print("recorded:", d["last_post"]["outcome"])
+          print("\n".join(tail))
+          PY
 
       - name: Throw away old crawls
         # always(): a refused post must not throw away ten minutes of
