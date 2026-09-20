@@ -323,24 +323,59 @@ def clear_queue():
 def split_evenly(items, cap):
     """
     Split a category into carousels of at most `cap` roles, as evenly as
-    possible.
+    possible, and never put one employer on two slides of the same post.
 
-    Slicing straight down the list leaves a runt: seven roles at a cap of six
-    becomes 6 + 1, and a carousel with one role is a two-slide post -- a cover
-    and a single card. Balancing gives 4 + 3 instead, which is two respectable
-    posts and still under the cap.
+    Two problems, one function.
+
+    SIZE. Slicing straight down the list leaves a runt: seven roles at a cap
+    of six becomes 6 + 1, and a carousel with one role is a two-slide post --
+    a cover and a single card. Balancing gives 4 + 3 instead, which is two
+    respectable posts and still under the cap.
+
+    REPEATS. drop_repeats already caps an employer at MAX_PER_EMPLOYER, but
+    it does that across the whole CATEGORY, and a category becomes several
+    carousels. Slicing contiguously then undid the work: items are sorted by
+    logo and posted date, an employer's two roles almost always share both,
+    so they sat next to each other in the list and fell into the same post.
+    Zimmer Biomet twice, Apple twice, AECOM twice -- different roles every
+    time, but two slides carrying the same name and the same mark read as a
+    duplicate, which is how this was reported.
+
+    So the roles are dealt into the parts rather than sliced. Employers with
+    the most roles are dealt first, because they are the ones that need the
+    room, and each role goes to the emptiest part that does not already hold
+    that employer. Each part is then put back into the original order, so the
+    newest-first feel of the carousel survives the dealing.
     """
     n = len(items)
     if n <= cap:
         return [items]
+
     parts = -(-n // cap)                 # how many carousels we need
     base, extra = divmod(n, parts)       # spread the remainder over the first few
-    out, i = [], 0
-    for k in range(parts):
-        take = base + (1 if k < extra else 0)
-        out.append(items[i:i + take])
-        i += take
-    return out
+    sizes = [base + (1 if k < extra else 0) for k in range(parts)]
+
+    position = {id(j): i for i, j in enumerate(items)}
+    buckets = [[] for _ in range(parts)]
+    owners = [set() for _ in range(parts)]
+
+    groups = {}
+    for j in items:
+        groups.setdefault(employer_identity(j), []).append(j)
+
+    for who in sorted(groups, key=lambda k: -len(groups[k])):
+        for j in groups[who]:
+            room = [i for i in range(parts) if len(buckets[i]) < sizes[i]]
+            # a part that has not got this employer yet, if there is one; with
+            # MAX_PER_EMPLOYER at 2 and at least 2 parts there always is.
+            choice = [i for i in room if who not in owners[i]] or room
+            i = min(choice, key=lambda i: len(buckets[i]))
+            buckets[i].append(j)
+            owners[i].add(who)
+
+    for b in buckets:
+        b.sort(key=lambda j: position[id(j)])
+    return buckets
 
 
 # How many slides one employer may take in a category. Three SG Fleet cards
