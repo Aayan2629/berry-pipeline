@@ -1,4 +1,24 @@
 {
   "ig_token_obtained": "2026-09-02",
-  "updated_at": "2026-09-20T01:58:19+00:00"
+  "updated_at": "2026-09-20T02:11:45+00:00",
+  "last_post": {
+    "outcome": "failure",
+    "at": "2026-09-20T02:19:49+00:00",
+    "log": [
+      "    slide 1 ok",
+      "    slide 2 ok",
+      "    slide 3 ok",
+      "    slide 4 ok",
+      "    slide 5 ok",
+      "    slide 6 ok",
+      "    slide 7 ok",
+      "    slide 8 ok",
+      "  waiting for Meta to fetch the slides...",
+      "  grouping them into a carousel...",
+      "    still processing the carousel... (2s)",
+      "  publishing...",
+      "Publishing failed (HTTP 403):",
+      "{\"error\":{\"message\":\"Application request limit reached\",\"type\":\"OAuthException\",\"is_transient\":false,\"code\":4,\"error_subcode\":2207051,\"error_user_title\":\"action is blocked\",\"error_user_msg\":\"We restrict certain activity to protect our community. Tell us if you think we made a mistake.\",\"fbtrace_id\":\"An5B_WrJHJ7Gme1VXy60cOK\"}}"
+    ]
+  }
 }
