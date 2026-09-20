@@ -91,6 +91,40 @@ def now():
     """Sydney wall-clock time, as a naive datetime."""
     return datetime.now(SYDNEY).replace(tzinfo=None)
 
+# When Meta refuses with "action is blocked" (subcode 2207051) the account is
+# under a temporary restriction, and every further attempt while it is on makes
+# it longer. The daily run is 24 hours apart so it is never affected; this only
+# stops the back-to-back attempts that happen when someone is re-running the
+# pipeline to fix something else. The block itself is still reported -- loudly
+# -- it is just not poked at.
+BLOCK_SUBCODE = "2207051"
+BLOCK_COOLDOWN_HOURS = 6
+STATUS_FILE = os.path.join(HERE, "status.json")
+
+
+def blocked_recently():
+    """How long is left on a self-imposed cooldown, or None."""
+    try:
+        with open(STATUS_FILE, encoding="utf-8") as f:
+            last = json.load(f).get("last_post") or {}
+    except Exception:
+        return None
+    # The log, not the outcome: a run that backed off is recorded as a success
+    # (it did the right thing), and that must not read as "the block cleared".
+    # The message printed on backing off names the subcode for exactly this
+    # reason, so a chain of back-to-back runs keeps its hands off. The first
+    # run after the block really lifts logs a publish with no subcode in it,
+    # and the cooldown ends there.
+    if BLOCK_SUBCODE not in " ".join(str(x) for x in (last.get("log") or [])):
+        return None
+    try:
+        when = datetime.fromisoformat(last["at"]).astimezone(SYDNEY).replace(tzinfo=None)
+    except Exception:
+        return None
+    left = timedelta(hours=BLOCK_COOLDOWN_HOURS) - (now() - when)
+    return left if left.total_seconds() > 0 else None
+
+
 # How far back to look for a category whose leftover parts still need posting.
 # Two days covers "Finance had 12 new roles on Thursday, so parts 2 and 3 go
 # out Friday and Saturday".
@@ -475,6 +509,18 @@ def main():
             pass
         category = category or "Unknown"
     else:
+        # Only the unattended path backs off. Asking for a post by name, by
+        # category or with --now is a person deciding to try anyway, and that
+        # is their call to make.
+        left = blocked_recently()
+        if left is not None and not args.now and not args.dry_run:
+            mins = int(left.total_seconds() // 60)
+            print(f"Instagram blocked the last publish (subcode {BLOCK_SUBCODE}). "
+                  f"Every attempt while a block is on extends it, so this run is "
+                  f"leaving it alone for another {mins // 60}h {mins % 60}m.")
+            print("Nothing has been lost -- the carousel stays in the queue and "
+                  "goes out on the next run once the block lifts.")
+            return 0
         carousel, category, back = pick_for_today()
         if not carousel and args.now:
             # --now: post whatever is waiting, whatever day it is
