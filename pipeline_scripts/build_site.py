@@ -234,363 +234,679 @@ TEMPLATE = """<!DOCTYPE html>
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;800&family=Inter+Tight:wght@400;500;600&family=JetBrains+Mono:wght@400;700&display=swap">
 <style>
+  /* ---- dark first: this is the design, light is the courtesy ---- */
   :root {
-    --bg: #f7f3f1;
-    --bg-2: #efe8e6;
-    --card: #ffffff;
-    --ink: #1c1518;
-    --ink-2: #5c5258;
-    --muted: #8a7f86;
-    --line: #eadfe4;
-    --line-soft: #f0e8eb;
-    --berry: #c42d5e;
-    --teal: #1a6c70;
-    --rust: #b5522c;
-    --ok: #1a7a4c;
-    --r: 16px;
-    --shadow: 0 1px 2px rgba(28,21,24,.04), 0 12px 32px -18px rgba(28,21,24,.18);
-    --dur: .22s;
-    --ease: cubic-bezier(.22,.8,.28,1);
+    --bg:#100c11; --bg-2:#171018; --card:#1b141d; --card-2:#221925;
+    --line:#2e2331; --line-soft:#241b27;
+    --ink:#f6f0f4; --ink-2:#c9bcc9; --muted:#8f8194;
+    --berry:#ff5c8a; --teal:#3fb6bc; --rust:#e08a5e;
+    --ok:#5fd6a0;
+    --r:3px;
+    /* Glass. The alpha is low enough to read the capsules through and the
+       blur high enough that a bright shape drifting behind a card never
+       fights the job title for attention -- that balance is the whole
+       difficulty with this look. */
+    --glass:rgba(31,22,34,.42);
+    --glass-2:rgba(38,28,42,.58);
+    --glass-line:rgba(255,255,255,.10);
+    --glass-lit:rgba(255,255,255,.07);
+    --blur:22px;
+    --dur:.42s; --ease:cubic-bezier(.22,.8,.28,1);
   }
-  * { box-sizing: border-box; }
-  html { scroll-behavior: smooth; overflow-x: clip; }
-  body {
-    margin: 0;
-    background: var(--bg);
-    color: var(--ink);
-    font: 16px/1.5 "Inter Tight", -apple-system, BlinkMacSystemFont, sans-serif;
-    -webkit-font-smoothing: antialiased;
-  }
-  body::before {
-    content: "";
-    position: fixed; inset: 0; z-index: -1; pointer-events: none;
-    background:
-      radial-gradient(900px 420px at 12% -8%, rgba(196,45,94,.10), transparent 62%),
-      radial-gradient(700px 360px at 100% 0%, rgba(26,108,112,.08), transparent 58%);
-  }
-  a { color: inherit; }
-  .wrap { max-width: 1120px; margin: 0 auto; padding: 0 24px; }
-  ::selection { background: color-mix(in srgb, var(--berry) 28%, white); }
-  :focus-visible { outline: 2px solid var(--berry); outline-offset: 3px; }
-
-  .bar {
-    position: sticky; top: 0; z-index: 30;
-    background: color-mix(in srgb, var(--bg) 78%, transparent);
-    -webkit-backdrop-filter: blur(18px) saturate(140%);
-    backdrop-filter: blur(18px) saturate(140%);
-    border-bottom: 1px solid var(--line);
-  }
-  .bar .wrap {
-    display: flex; align-items: center; justify-content: space-between;
-    gap: 16px; padding-top: 14px; padding-bottom: 14px;
-  }
-  .brand { display: flex; align-items: center; gap: 10px; text-decoration: none; }
-  .brand b { font: 800 18px/1 Archivo, sans-serif; letter-spacing: -.03em; }
-  .mark { width: 30px; height: 30px; flex: none; color: var(--berry); overflow: visible; }
-  .m-ghost { opacity: .28; }
-  .ig {
-    display: inline-flex; align-items: center; gap: 8px;
-    text-decoration: none; font: 600 13.5px "Inter Tight", sans-serif;
-    color: #fff; background: var(--berry); padding: 8px 15px; border-radius: 999px;
-    transition: transform var(--dur) var(--ease), filter var(--dur) var(--ease);
-  }
-  .ig:hover { transform: translateY(-1px); filter: brightness(1.06); }
-  .ig svg { width: 14px; height: 15px; fill: currentColor; }
-  .ig::after { display: none; }
-
-  /* Opening WebGL scene is off: it ate four screens before the jobs. */
-  .berry, .drops, .rail { display: none !important; }
-
-  .hero { padding: 56px 0 36px; }
-  .kicker {
-    font: 700 11px/1 "JetBrains Mono", monospace; letter-spacing: .2em;
-    text-transform: uppercase; color: var(--muted); margin-bottom: 18px;
-  }
-  h1 {
-    margin: 0; font-family: Archivo, sans-serif; font-weight: 800;
-    font-size: clamp(2.2rem, 6vw, 4.1rem); line-height: 1.02;
-    letter-spacing: -.045em; text-wrap: balance;
-  }
-  h1 .n { color: var(--berry); font-variant-numeric: tabular-nums; }
-  h1.big { display: flex; flex-wrap: wrap; align-items: center; gap: .12em .28em; }
-  h1.big .ln { white-space: nowrap; }
-  .pill {
-    flex: none; display: block; width: .9em; height: .42em; border-radius: 999px;
-    background: linear-gradient(120deg, #7ec8f2 0%, #c42d5e 100%);
-  }
-  .scanline {
-    margin: 16px 0 0; font-family: "JetBrains Mono", monospace;
-    font-size: .8rem; letter-spacing: .04em; color: var(--muted);
-  }
-  .scanline b { color: var(--ink-2); font-weight: 700; font-variant-numeric: tabular-nums; }
-  .stats { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 26px; }
-  .stat {
-    display: flex; align-items: baseline; gap: 8px;
-    padding: 10px 14px; border: 1px solid var(--line); border-radius: 999px;
-    background: var(--card); font-size: .84rem; color: var(--ink-2);
-  }
-  .stat b {
-    font: 700 1.05rem/1 "JetBrains Mono", monospace;
-    color: var(--c, var(--berry)); font-variant-numeric: tabular-nums;
-  }
-
-  .stage { height: auto; }
-  .pin { position: static; height: auto; display: block; overflow: visible; padding: 8px 0 36px; }
-  .pcard {
-    position: relative; width: min(720px, 100%); margin: 0 auto; padding: 28px 28px 24px;
-    border-radius: 20px; background: var(--card); border: 1px solid var(--line);
-    box-shadow: var(--shadow);
-  }
-  .pcard .ptop { display: flex; gap: 14px; align-items: center; }
-  .plogo {
-    width: 56px; height: 56px; border-radius: 14px; flex: none; overflow: hidden;
-    display: grid; place-items: center; background: #fff; border: 1px solid var(--line);
-  }
-  .plogo img { width: 100%; height: 100%; object-fit: contain; padding: 8px; }
-  .plogo .initials { width: 100%; height: 100%; border-radius: 0; font-size: 18px; }
-  .pcard h2 {
-    margin: 0; font: 800 clamp(1.2rem, 2.8vw, 1.7rem)/1.2 Archivo, sans-serif;
-    letter-spacing: -.03em;
-  }
-  .pcard .pco { color: var(--ink-2); margin-top: 4px; font-size: .95rem; }
-  .ptags { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 18px; }
-  .ptag {
-    border: 1px solid var(--line); border-radius: 999px;
-    padding: 6px 12px; font-size: .82rem; color: var(--ink-2); opacity: 1;
-    background: var(--bg);
-  }
-  .ptag.pay {
-    color: var(--ok); font: 700 12px "JetBrains Mono", monospace;
-    border-color: color-mix(in srgb, var(--ok) 35%, transparent);
-    background: color-mix(in srgb, var(--ok) 8%, white);
-  }
-  .applybig {
-    display: inline-flex; align-items: center; gap: 10px; margin-top: 22px;
-    text-decoration: none; color: #fff; background: var(--c, var(--berry));
-    font: 700 15px "Inter Tight", sans-serif; padding: 12px 22px;
-    border-radius: 999px; opacity: 1;
-    transition: transform var(--dur) var(--ease), filter var(--dur) var(--ease);
-  }
-  .applybig:hover { transform: translateY(-1px); filter: brightness(1.05); }
-  .applybig svg { width: 16px; height: 12px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; }
-  .prail { display: none; }
-  .ptxt {
-    text-align: center; margin: 14px 0 0;
-    font: 700 10px/1 "JetBrains Mono", monospace; letter-spacing: .22em;
-    text-transform: uppercase; color: var(--muted);
-  }
-  @media (max-width: 720px) { .pcard { padding: 22px; } }
-
-  .controls { padding: 8px 0 10px; }
-  .row { display: flex; gap: 10px; flex-wrap: wrap; }
-  .sw { position: relative; flex: 1 1 300px; min-width: 0; display: flex; }
-  .sw input { flex: 1; padding-right: 70px; }
-  .sw .clr {
-    position: absolute; right: 38px; top: 50%; transform: translateY(-50%);
-    width: 26px; height: 26px; border: 0; border-radius: 50%; cursor: pointer;
-    background: var(--line); color: var(--ink); font: 600 14px/1 sans-serif;
-    display: none; place-items: center; padding: 0;
-  }
-  .sw .clr:hover { background: var(--berry); color: #fff; }
-  .sw.has .clr { display: grid; }
-  .sw kbd {
-    position: absolute; right: 11px; top: 50%; transform: translateY(-50%);
-    font: 600 11px/1 "JetBrains Mono", monospace; color: var(--muted);
-    border: 1px solid var(--line); border-radius: 6px; padding: 3px 6px;
-    pointer-events: none; background: var(--bg);
-  }
-  .sw.has kbd, .sw:focus-within kbd { display: none; }
-  @media (hover: none) { .sw kbd { display: none; } }
-  input[type=search], select {
-    font: 15px "Inter Tight", sans-serif; color: var(--ink); background: var(--card);
-    border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px;
-    transition: border-color var(--dur) var(--ease), box-shadow var(--dur) var(--ease);
-  }
-  input[type=search] { flex: 1 1 280px; min-width: 0; }
-  input[type=search]:hover, select:hover { border-color: color-mix(in srgb, var(--berry) 40%, var(--line)); }
-  input[type=search]:focus, select:focus {
-    outline: none; border-color: var(--berry);
-    box-shadow: 0 0 0 3px color-mix(in srgb, var(--berry) 18%, transparent);
-  }
-  input[type=search]::placeholder { color: var(--muted); }
-  .chips { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
-  @media (max-width: 720px) {
-    .chips {
-      flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none;
-      -webkit-overflow-scrolling: touch;
-      margin-left: -24px; margin-right: -24px; padding: 2px 24px;
+  @media (prefers-color-scheme: light) {
+    :root {
+      --bg:#faf7f9; --bg-2:#f2ecf1; --card:#ffffff; --card-2:#f7f2f6;
+      --line:#e3d9e2; --line-soft:#eee7ed;
+      --ink:#1a121c; --ink-2:#4a3d4c; --muted:#7c6f81;
+      --berry:#a32a58; --teal:#166b70; --rust:#8c4324;
+      --ok:#15764f;
+      --glass:rgba(255,255,255,.55);
+      --glass-2:rgba(255,255,255,.72);
+      --glass-line:rgba(26,18,28,.10);
+      --glass-lit:rgba(255,255,255,.65);
     }
-    .chips::-webkit-scrollbar { display: none; }
-    .chip { flex: none; }
-    .sw { flex: 1 1 150px; }
-    select { flex: 0 0 auto; }
   }
-  .chip {
-    display: inline-flex; align-items: center; gap: 8px; cursor: pointer;
-    font: 500 13.5px "Inter Tight", sans-serif; color: var(--ink-2);
-    background: var(--card); border: 1px solid var(--line);
-    border-radius: 999px; padding: 9px 14px; min-height: 42px;
-    transition: color var(--dur) var(--ease), border-color var(--dur) var(--ease),
-                background var(--dur) var(--ease);
+  * { box-sizing:border-box; }
+  html { scroll-behavior:smooth; overflow-x:clip; }
+  body {
+    margin:0; background:var(--bg); color:var(--ink);
+    font:16px/1.5 "Inter Tight",-apple-system,BlinkMacSystemFont,sans-serif;
+    -webkit-font-smoothing:antialiased;
   }
-  .chip:hover { border-color: var(--c); color: var(--ink); }
-  .tick { width: 15px; height: 15px; flex: none; display: block; }
-  .tick svg { width: 100%; height: 100%; overflow: visible; }
-  .tk-box {
-    fill: var(--c); stroke: var(--c); stroke-width: 1.7;
-    transform: scale(.55); transform-origin: 8px 8px;
-    transition: transform .28s var(--ease), fill .2s var(--ease), rx .28s var(--ease);
-  }
-  .tk-mark {
-    fill: none; stroke: var(--c); stroke-width: 2.1;
-    stroke-linecap: round; stroke-linejoin: round;
-    stroke-dasharray: 11; stroke-dashoffset: 11;
-  }
-  .tk-ring { display: none; }
-  .chip[aria-pressed="true"] .tk-box { transform: scale(1); fill: transparent; rx: 4; }
-  .chip[aria-pressed="true"] .tk-mark {
-    stroke-dashoffset: 0; transition: stroke-dashoffset .25s var(--ease) .05s;
-  }
-  .chip b { font: 700 11px/1 "JetBrains Mono", monospace; color: var(--muted); }
-  .chip.alt { --c: var(--berry); }
-  .chipgap { width: 1px; align-self: stretch; margin: 6px 4px; background: var(--line); flex: none; }
-  .chip[aria-pressed="true"] {
-    color: var(--c); border-color: color-mix(in srgb, var(--c) 45%, var(--line));
-    background: color-mix(in srgb, var(--c) 9%, white);
-  }
-  .chip[aria-pressed="true"] b { color: var(--c); }
-  .summary {
-    display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap;
-    padding: 18px 0 12px;
-  }
-  .count { margin: 0; color: var(--ink-2); font: 400 13px/1.4 "JetBrains Mono", monospace; }
-  .count s { color: var(--muted); text-decoration: none; }
-  .clearall {
-    background: none; border: 0; cursor: pointer; padding: 0;
-    font: 600 13px "Inter Tight", sans-serif; color: var(--berry);
-    border-bottom: 1px solid color-mix(in srgb, var(--berry) 40%, transparent);
-  }
-  .clearall[hidden] { display: none; }
-  .tag.pay {
-    color: var(--ok); border-color: color-mix(in srgb, var(--ok) 28%, transparent);
-    background: color-mix(in srgb, var(--ok) 8%, white); font-weight: 600;
-  }
-  .src { font: 500 11px/1 "JetBrains Mono", monospace; color: var(--muted); letter-spacing: .04em; }
-  .tlink { color: inherit; text-decoration: none; }
-  .tlink::after { content: ""; position: absolute; inset: 0; z-index: 1; border-radius: var(--r); }
-  .card:hover .tlink { text-decoration: underline; text-underline-offset: 3px; text-decoration-thickness: 1px; }
-  .ship { z-index: 3; }
-  .card .foot { position: relative; z-index: 2; }
+  a { color:inherit; }
+  .wrap { max-width:1180px; margin:0 auto; padding:0 26px; }
+  ::selection { background:var(--berry); color:var(--bg); }
+  :focus-visible { outline:2px solid var(--berry); outline-offset:3px; }
 
-  .grid {
-    display: grid; gap: 14px;
-    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-    padding-bottom: 72px;
-  }
-  .card {
-    position: relative; background: var(--card); border: 1px solid var(--line);
-    border-radius: var(--r); padding: 18px 18px 16px;
-    /* The browser skips layout and paint for cards that are off screen, which
-       is what keeps a 200-card page scrolling smoothly. The intrinsic size is
-       the measured average card (min 161, median 182, max 223), so the scrollbar
-       barely moves; "auto" means the real height is remembered after first paint. */
-    content-visibility: auto;
-    contain-intrinsic-size: auto 188px;
-    display: flex; flex-direction: column; gap: 12px;
-    box-shadow: 0 1px 0 rgba(28,21,24,.03);
-    transition: transform var(--dur) var(--ease), border-color var(--dur) var(--ease),
-                box-shadow var(--dur) var(--ease);
-  }
-  .card::before {
-    content: ""; position: absolute; left: 0; top: 16px; bottom: 16px;
-    width: 3px; border-radius: 0 3px 3px 0; background: var(--c);
-  }
-  .card:hover {
-    z-index: 4; transform: translateY(-3px); border-color: color-mix(in srgb, var(--c) 35%, var(--line));
-    box-shadow: var(--shadow);
-  }
-  .top { display: flex; gap: 12px; align-items: flex-start; }
-  .logo {
-    width: 42px; height: 42px; border-radius: 10px; flex: none; object-fit: contain;
-    background: #fff; border: 1px solid var(--line); padding: 5px;
-  }
-  .initials {
-    width: 42px; height: 42px; border-radius: 10px; flex: none; display: grid;
-    place-items: center; background: var(--c); color: #fff;
-    font: 700 13px Archivo, sans-serif;
-  }
-  .card h2 { margin: 0; font: 600 15.5px/1.35 "Inter Tight", sans-serif; letter-spacing: -.01em; }
-  .co { font-size: 13px; color: var(--muted); margin-top: 3px; }
-  .meta { display: flex; flex-wrap: wrap; gap: 6px; }
-  .tag {
-    font: 400 12px/1.5 "Inter Tight", sans-serif; color: var(--ink-2);
-    background: var(--bg); border: 1px solid var(--line);
-    border-radius: 999px; padding: 4px 9px;
-  }
-  .tag.pay {
-    color: var(--ok); border-color: color-mix(in srgb, var(--ok) 30%, transparent);
-    background: color-mix(in srgb, var(--ok) 8%, white); font-weight: 600;
-    font-family: "JetBrains Mono", monospace; font-size: 11.5px;
-  }
-  .new {
-    font: 700 10px/1 "JetBrains Mono", monospace; letter-spacing: .08em;
-    text-transform: uppercase; color: var(--ok);
-    border: 1px solid color-mix(in srgb, var(--ok) 30%, transparent);
-    border-radius: 999px; padding: 5px 8px;
-    background: color-mix(in srgb, var(--ok) 8%, white);
-  }
-  .foot {
-    display: flex; justify-content: space-between; align-items: center; gap: 10px;
-    margin-top: auto; padding-top: 6px;
-  }
-  .age { font: 400 11.5px "JetBrains Mono", monospace; color: var(--muted); }
-  .apply {
-    position: relative; font: 600 13px "Inter Tight", sans-serif; text-decoration: none;
-    color: var(--ink); border: 1px solid var(--line); border-radius: 999px;
-    padding: 8px 14px; white-space: nowrap; background: var(--card);
-    transition: background var(--dur) var(--ease), color var(--dur) var(--ease),
-                border-color var(--dur) var(--ease);
-  }
-  .card:hover .apply { border-color: var(--c); color: var(--c); }
-  .apply:hover, .apply:focus-visible {
-    color: #fff; border-color: var(--c); background: var(--c);
-  }
-  .apply::before, .apply::after { display: none; }
-  .ship { position: relative; display: inline-block; }
-  .flight { display: none; }
+  /* ---- top bar ---- */
+  /* No bar. The mark and the handle float in the top corners over whatever
+     is behind them -- the opening scene, then the page. Fixed rather than
+     sticky so it takes up no room in the layout, which is what lets the
+     berry scene run full-bleed to the top of the window.
 
-  /* Only the first rows are hidden for the entrance. Hiding all 200+ meant
-     every off-screen card sat at opacity 0 waiting its turn, which is what
-     left grey gaps if you scrolled straight after a filter change. */
-  .grid.reveal .card:nth-child(-n+16) { opacity: 0; transform: translateY(10px); }
+     pointer-events are off on the strip and back on for the two links, so an
+     invisible full-width band is not sitting over the page swallowing clicks. */
+  .bar { position:fixed; top:0; left:0; right:0; z-index:20;
+         pointer-events:none; }
+  .bar .wrap { display:flex; align-items:center; justify-content:space-between;
+               gap:16px; padding-top:18px; padding-bottom:18px; }
+  .bar a { pointer-events:auto; }
+  /* The wordmark has no panel behind it any more, so it carries its own
+     shadow to stay readable over a bright frame of the explosion. */
+  .brand b { text-shadow:0 2px 18px rgba(0,0,0,.75), 0 1px 4px rgba(0,0,0,.6); }
+  .mark { filter:drop-shadow(0 2px 12px rgba(0,0,0,.6)); }
+  .brand { display:flex; align-items:center; gap:11px; text-decoration:none; }
+  /* The mark is drawn, not placed: one polygon whose points are recomputed
+     each frame, easing between a spark and a berry. A second copy trails a
+     little behind at low opacity, which is what gives it depth without a
+     second moving part. Falls back to the spark, drawn once, when the viewer
+     has asked for less motion. */
+  .mark { width:34px; height:34px; flex:none; color:var(--berry); overflow:visible; }
+  .m-ghost { opacity:.3; }
+  .brand:hover .mark { color:var(--berry); }
+  .brand b { font:800 19px/1 Archivo,sans-serif; letter-spacing:-.03em; }
+  .ig { display:inline-flex; align-items:center; gap:8px; text-decoration:none;
+        font:600 13.5px "Inter Tight",sans-serif; color:var(--bg);
+        background:var(--berry); padding:9px 16px; border-radius:999px;
+        transition:transform var(--dur) var(--ease), filter var(--dur) var(--ease); }
+  .ig { position:relative; overflow:hidden; isolation:isolate;
+        transition:transform var(--dur) var(--ease), background var(--dur) var(--ease),
+                   box-shadow .28s var(--ease); }
+  .ig::after { content:""; position:absolute; top:0; bottom:0; z-index:-1;
+        left:-65%; width:42%; opacity:0; transform:skewX(-18deg);
+        background:linear-gradient(100deg, transparent,
+                   rgba(255,255,255,.85), transparent); }
+  .ig:hover { transform:translateY(-2px);
+        background:linear-gradient(135deg,
+                   color-mix(in srgb, var(--berry) 52%, #ffffff) 0%,
+                   var(--berry) 52%,
+                   color-mix(in srgb, var(--berry) 72%, #8ec9f4) 100%);
+        box-shadow:0 7px 18px -5px color-mix(in srgb, var(--berry) 85%, transparent),
+                   0 0 34px -2px color-mix(in srgb, var(--berry) 55%, transparent),
+                   0 0 78px 6px color-mix(in srgb, var(--berry) 30%, transparent); }
+  .ig:hover::after { animation:sheen .8s var(--ease); }
+  .ig svg { width:15px; height:15px; fill:currentColor; }
+
+  /* ---- hero ---- */
+  .hero { padding:74px 0 42px; border-bottom:1px solid var(--line-soft); }
+  .kicker { font:700 11px/1 "JetBrains Mono",monospace; letter-spacing:.22em;
+            text-transform:uppercase; color:var(--muted); margin-bottom:22px; }
+  h1 { margin:0; font-family:Archivo,sans-serif; font-weight:800;
+       font-size:clamp(2.6rem,7.2vw,5.4rem); line-height:.94;
+       letter-spacing:-.045em; text-wrap:balance; }
+  h1 .n { color:var(--berry); font-variant-numeric:tabular-nums; }
+  /* The headline is a flex row so the capsule between the two halves can
+     change width and push the words apart. Animating width forces a reflow
+     each frame, which is normally something to avoid -- here it is the whole
+     effect, and it is one element on one row, so the cost is a rounding
+     error. */
+  h1.big { display:flex; flex-wrap:wrap; align-items:center; gap:0 .24em; }
+  h1.big .ln { white-space:nowrap; }
+  .pill { flex:none; display:block; width:1.2em; height:.6em; border-radius:999px;
+          background:linear-gradient(120deg,#7ec8f2 0%,#b4b6ef 48%,#f2a9e2 100%);
+          box-shadow:0 0 40px rgba(146,178,238,.32); }
+  .stats { display:flex; flex-wrap:wrap; gap:9px; margin-top:30px; }
+  .stat { display:flex; align-items:baseline; gap:9px; padding:11px 15px;
+          border:1px solid var(--glass-line); border-radius:var(--r);
+          background:var(--glass);
+          -webkit-backdrop-filter:blur(14px); backdrop-filter:blur(14px);
+          font-size:.86rem; color:var(--ink-2); }
+  .stat b { font:700 1.15rem/1 "JetBrains Mono",monospace; color:var(--c,var(--berry));
+            font-variant-numeric:tabular-nums; }
+
+  /* ---- the featured role ----
+     A tall section with the card stuck to the middle of it. Scrolling
+     through that height assembles the card piece by piece: the logo lands,
+     the title rises, the tags come in one after another, then the button.
+     It is scrubbed, not played -- the scroll position IS the playhead, so
+     scrolling back up takes it apart again.
+
+     200vh, not the 340vh it was drafted at: this sits between someone and
+     the job they came to find, and two screens is enough to make the point. */
+  .stage { position:relative; height:200vh; }
+  .pin { position:sticky; top:0; height:100vh; display:grid; place-items:center;
+         overflow:hidden; }
+  .pcard { position:relative; width:min(620px,88vw); padding:40px;
+           border-radius:22px; background:var(--glass-2);
+           border:1px solid var(--glass-line);
+           -webkit-backdrop-filter:blur(var(--blur)) saturate(150%);
+           backdrop-filter:blur(var(--blur)) saturate(150%);
+           box-shadow:inset 0 1px 0 var(--glass-lit),
+                      0 40px 90px -40px rgba(0,0,0,.7);
+           will-change:transform; }
+  .pcard .ptop { display:flex; gap:16px; align-items:center; }
+  .plogo { width:62px; height:62px; border-radius:15px; flex:none; overflow:hidden;
+           display:grid; place-items:center; background:#fff;
+           border:1px solid var(--glass-line); }
+  .plogo img { width:100%; height:100%; object-fit:contain; padding:9px; }
+  .plogo .initials { width:100%; height:100%; border-radius:0; font-size:20px; }
+  .pcard h2 { margin:0; font:800 clamp(1.35rem,3.3vw,2rem)/1.14 Archivo,sans-serif;
+              letter-spacing:-.035em; }
+  .pcard .pco { color:var(--ink-2); margin-top:5px; font-size:.95rem; }
+  .ptags { display:flex; flex-wrap:wrap; gap:8px; margin-top:24px; }
+  .ptag { border:1px solid var(--glass-line); border-radius:999px;
+          padding:8px 14px; font-size:.85rem; color:var(--ink-2); opacity:0; }
+  .ptag.pay { color:var(--ok); font:700 12px "JetBrains Mono",monospace;
+              border-color:color-mix(in srgb, var(--ok) 45%, transparent); }
+  .applybig { display:inline-flex; align-items:center; gap:11px; margin-top:30px;
+              text-decoration:none; color:var(--bg); background:var(--c,var(--berry));
+              font:700 16px "Inter Tight",sans-serif; padding:15px 28px;
+              border-radius:999px; opacity:0;
+              box-shadow:0 14px 34px -12px var(--c,var(--berry));
+              transition:transform var(--dur) var(--ease), box-shadow .3s var(--ease); }
+  .applybig:hover { transform:translateY(-2px);
+              box-shadow:0 18px 40px -12px var(--c,var(--berry)),
+                         0 0 60px -6px color-mix(in srgb, var(--c,var(--berry)) 45%, transparent); }
+  .applybig svg { width:17px; height:13px; fill:none; stroke:currentColor;
+                  stroke-width:2; stroke-linecap:round; }
+  .prail { position:absolute; left:max(26px,5vw); top:50%; width:2px; height:150px;
+           transform:translateY(-50%); background:var(--line-soft);
+           border-radius:2px; opacity:0; }
+  .prail i { position:absolute; inset:0; border-radius:2px;
+             background:var(--c,var(--berry)); transform:scaleY(0);
+             transform-origin:top; }
+  .ptxt { position:absolute; left:50%; bottom:34px; transform:translateX(-50%);
+          font:700 10px/1 "JetBrains Mono",monospace; letter-spacing:.24em;
+          text-transform:uppercase; color:var(--muted); white-space:nowrap; }
+  @media (max-width:720px) { .pcard { padding:28px; } .stage { height:170vh; } }
+  /* No JavaScript, or reduced motion: the section collapses to one screen with
+     the card simply there. It is never a blank 200vh hole. */
+  .stage.flat { height:auto; }
+  .stage.flat .pin { position:static; height:auto; padding:70px 0; }
+  .stage.flat .ptag, .stage.flat .applybig { opacity:1; }
+  .stage.flat .prail { display:none; }
+
+  /* ---- controls ----
+     Deliberately not sticky. It was, and it followed you down the page and
+     sat over the cards -- including their Apply buttons. Filters that are
+     always in reach are not worth a bar that covers the thing you came to
+     click. The header still sticks; this stays where it was put. */
+  .controls { padding:24px 0 18px; }
+  .row { display:flex; gap:10px; flex-wrap:wrap; }
+
+  /* search, with a way out of it */
+  .sw { position:relative; flex:1 1 300px; min-width:0; display:flex; }
+  .sw input { flex:1; padding-right:70px; }
+  .sw .clr { position:absolute; right:38px; top:50%; transform:translateY(-50%);
+             width:26px; height:26px; border:0; border-radius:50%; cursor:pointer;
+             background:var(--line); color:var(--ink); font:600 14px/1 sans-serif;
+             display:none; place-items:center; padding:0; }
+  .sw .clr:hover { background:var(--berry); color:var(--bg); }
+  .sw.has .clr { display:grid; }
+  /* The slash hint only means anything to someone with a keyboard. */
+  .sw kbd { position:absolute; right:11px; top:50%; transform:translateY(-50%);
+            font:600 11px/1 "JetBrains Mono",monospace; color:var(--muted);
+            border:1px solid var(--line); border-radius:5px; padding:4px 6px;
+            pointer-events:none; }
+  .sw.has kbd, .sw:focus-within kbd { display:none; }
+  @media (hover:none) { .sw kbd { display:none; } }
+  input[type=search], select {
+    font:15px "Inter Tight",sans-serif; color:var(--ink); background:var(--glass);
+    -webkit-backdrop-filter:blur(14px); backdrop-filter:blur(14px);
+    border:1px solid var(--glass-line); border-radius:var(--r); padding:11px 14px;
+    transition:border-color var(--dur) var(--ease);
+  }
+  input[type=search] { flex:1 1 280px; min-width:0; }
+  input[type=search]:hover, select:hover { border-color:var(--muted); }
+  input[type=search]::placeholder { color:var(--muted); }
+  /* On a phone the chips run off the edge rather than stacking into three
+     rows that push the results below the fold. */
+  .chips { display:flex; gap:8px; flex-wrap:wrap; margin-top:11px; }
+  @media (max-width:720px) {
+    .chips { flex-wrap:nowrap; overflow-x:auto; scrollbar-width:none;
+             -webkit-overflow-scrolling:touch;
+             margin-left:-26px; margin-right:-26px; padding:2px 26px; }
+    .chips::-webkit-scrollbar { display:none; }
+    .chip { flex:none; }
+  }
+  .chip { display:inline-flex; align-items:center; gap:8px; cursor:pointer;
+          font:500 13.5px "Inter Tight",sans-serif; color:var(--ink-2);
+          background:transparent; border:1px solid var(--line);
+          border-radius:999px; padding:11px 15px; min-height:44px;
+          transition:color var(--dur) var(--ease), border-color var(--dur) var(--ease),
+                     background var(--dur) var(--ease), transform var(--dur) var(--ease),
+                     box-shadow .3s var(--ease); }
+  .chip:hover { transform:translateY(-1px); border-color:var(--c); }
+
+  /* The dot on the left of each chip is not a dot -- it is a checkbox that
+     has not been ticked yet. Selecting a category squares it off, empties it
+     out and draws a tick into it, which is the gesture people already know
+     from filling in an application form. */
+  .tick { width:16px; height:16px; flex:none; display:block; }
+  .tick svg { width:100%; height:100%; overflow:visible; }
+  .tk-box { fill:var(--c); stroke:var(--c); stroke-width:1.7;
+            transform:scale(.55); transform-origin:8px 8px;
+            transition:transform .4s cubic-bezier(.34,1.45,.5,1),
+                       fill .26s var(--ease), rx .4s cubic-bezier(.34,1.45,.5,1); }
+  .tk-mark { fill:none; stroke:var(--c); stroke-width:2.1;
+             stroke-linecap:round; stroke-linejoin:round;
+             stroke-dasharray:11; stroke-dashoffset:11; }
+  /* The ring is the stamp landing. It only ever plays on the way in. */
+  .tk-ring { fill:none; stroke:var(--c); stroke-width:1.4; opacity:0;
+             transform-origin:8px 8px; }
+
+  .chip[aria-pressed="true"] .tk-box { transform:scale(1); fill:transparent; rx:4; }
+  .chip[aria-pressed="true"] .tk-mark { stroke-dashoffset:0;
+             transition:stroke-dashoffset .3s var(--ease) .1s; }
+
+  .chip.stamp .tk-ring { animation:stamp .52s ease-out; }
+  .chip.pop { animation:chippop .42s cubic-bezier(.34,1.45,.5,1); }
+  @keyframes stamp   { from { transform:scale(.5);  opacity:.85; }
+                       to   { transform:scale(2.3); opacity:0; } }
+  @keyframes chippop { 0% { transform:scale(1); }
+                       32% { transform:scale(.955) translateY(-1px); }
+                       100% { transform:scale(1); } }
   @media (prefers-reduced-motion: reduce) {
-    html { scroll-behavior: auto; }
-    .grid.reveal .card:nth-child(-n+16) { opacity: 1; transform: none; }
-    * { transition-duration: .01ms !important; }
+    .chip.stamp .tk-ring, .chip.pop { animation:none; }
+    .tk-box, .tk-mark { transition:none; }
+  }
+  .chip b { font:700 11px/1 "JetBrains Mono",monospace; color:var(--muted); }
+  /* Paid and New are not categories, so they do not get a category colour --
+     they borrow the brand pink and sit after a divider. */
+  .chip.alt { --c:var(--berry); }
+  .chipgap { width:1px; align-self:stretch; margin:6px 4px;
+             background:var(--line); flex:none; }
+  @media (max-width:720px) { .chipgap { margin:6px 2px; } }
+  .chip:hover { box-shadow:0 0 22px -6px color-mix(in srgb, var(--c) 65%, transparent); }
+  .chip[aria-pressed="true"] { color:var(--c); border-color:var(--c);
+          background:color-mix(in srgb, var(--c) 13%, transparent);
+          box-shadow:0 0 0 1px color-mix(in srgb, var(--c) 32%, transparent),
+                     0 0 26px -6px color-mix(in srgb, var(--c) 75%, transparent),
+                     0 0 58px 2px color-mix(in srgb, var(--c) 26%, transparent); }
+  .chip[aria-pressed="true"] b { color:var(--c); }
+  .summary { display:flex; align-items:baseline; gap:12px; flex-wrap:wrap;
+             padding:20px 0 12px; }
+  .count { margin:0; color:var(--ink-2);
+           font:400 13px/1.4 "JetBrains Mono",monospace; letter-spacing:.04em; }
+  .count s { color:var(--muted); text-decoration:none; }
+  .clearall { background:none; border:0; cursor:pointer; padding:0;
+              font:600 12.5px "Inter Tight",sans-serif; color:var(--berry);
+              border-bottom:1px solid color-mix(in srgb, var(--berry) 45%, transparent); }
+  .clearall:hover { border-bottom-color:var(--berry); }
+  .clearall[hidden] { display:none; }
+
+  /* Pay is the one thing every student scans for first, so it is the one tag
+     that is allowed to be loud. Everything else on the row stays quiet. */
+  .tag.pay { color:var(--ok); border-color:color-mix(in srgb, var(--ok) 42%, transparent);
+             background:color-mix(in srgb, var(--ok) 10%, transparent); font-weight:600; }
+  /* Where the link goes. People are wary of job links; saying it up front is
+     worth the eight pixels. */
+  .src { font:500 11px/1 "JetBrains Mono",monospace; color:var(--muted);
+         letter-spacing:.06em; }
+  /* The title covers the card, so anywhere on it opens the listing -- but the
+     Apply button sits above that layer, keeping its own hover and its plane. */
+  .tlink { color:inherit; text-decoration:none; }
+  .tlink::after { content:""; position:absolute; inset:0; z-index:1; border-radius:var(--r); }
+  .card:hover .tlink { text-decoration:underline; text-underline-offset:3px;
+                       text-decoration-thickness:1px;
+                       text-decoration-color:color-mix(in srgb, var(--c) 60%, transparent); }
+  .ship { z-index:3; }
+  .card .foot { position:relative; z-index:2; }
+
+  @media (max-width:720px) {
+    .sw { flex:1 1 150px; }      /* search and sort share one row */
+    select { flex:0 0 auto; }
   }
 
-  .empty { padding: 64px 0 80px; color: var(--muted); text-align: center; }
-  .empty b {
-    display: block; color: var(--ink); font: 700 1.15rem/1.3 Archivo, sans-serif;
-    margin-bottom: 8px;
-  }
-  .empty button {
-    margin-top: 16px; cursor: pointer; color: #fff; background: var(--berry);
-    border: 0; border-radius: 999px; font: 600 14px "Inter Tight", sans-serif;
-    padding: 10px 18px;
-  }
-  footer {
-    border-top: 1px solid var(--line); padding: 22px 0 52px;
-    color: var(--muted); font-size: 13px;
-  }
-  footer a { color: var(--berry); text-decoration: none; }
-  footer a:hover { text-decoration: underline; }
-  main, footer { position: relative; z-index: 2; }
-  .flick { font-variant-numeric: tabular-nums; }
-  .c-0 { --c: var(--teal); }
-  .c-1 { --c: var(--berry); }
-  .c-2 { --c: var(--rust); }
+  /* ---- cards ---- */
+  .grid { display:grid; gap:11px; grid-template-columns:repeat(auto-fill,minmax(325px,1fr));
+          padding-bottom:80px; }
+  .card { position:relative; background:var(--glass); border:1px solid var(--glass-line);
+          /* Off-screen cards are not rendered at all. With a blurred backdrop
+             and an animated border on every card, painting two hundred of them
+             is what made scrolling stutter. The intrinsic size is measured, so
+             the scrollbar does not jump as cards come into range. */
+          content-visibility:auto; contain-intrinsic-size:auto 188px;
+          -webkit-backdrop-filter:blur(var(--blur)) saturate(150%);
+          backdrop-filter:blur(var(--blur)) saturate(150%);
+          /* a hairline of light along the top edge, the way a real pane of
+             glass catches it -- without this the card reads as a flat tint */
+          box-shadow:inset 0 1px 0 var(--glass-lit);
+          border-radius:var(--r); padding:19px 20px 17px;
+          display:flex; flex-direction:column; gap:11px;
+          transition:transform var(--dur) var(--ease), border-color var(--dur) var(--ease),
+                     background var(--dur) var(--ease); }
+  /* the accent rail: a hairline that grows on hover. one moving part, not five. */
+  /* Inset from the corners and rounded, so it no longer needs the card to clip
+     it -- which is what was cutting the Apply button's glow off at the edge. */
+  .card::before { content:""; position:absolute; left:1px; top:15px; bottom:15px;
+                  width:2px; border-radius:2px;
+                  background:var(--c); transform:scaleY(.28); transform-origin:top;
+                  transition:transform var(--dur) var(--ease); }
+  .card:hover { z-index:4; transform:translateY(-3px); border-color:var(--c);
+               background:var(--glass-2); }
+  .card:hover::before { transform:scaleY(1); }
+  .top { display:flex; gap:12px; align-items:flex-start; }
+  .logo { width:40px; height:40px; border-radius:7px; flex:none; object-fit:contain;
+          background:#fff; border:1px solid var(--line); padding:4px; }
+  .initials { width:40px; height:40px; border-radius:7px; flex:none; display:grid;
+              place-items:center; background:var(--c); color:var(--bg);
+              font:700 14px Archivo,sans-serif; }
+  .card h2 { margin:0; font:600 15.5px/1.32 "Inter Tight",sans-serif;
+             letter-spacing:-.008em; }
+  .co { font-size:13px; color:var(--muted); margin-top:3px; }
+  .meta { display:flex; flex-wrap:wrap; gap:6px; }
+  .tag { font:400 12px/1.5 "Inter Tight",sans-serif; color:var(--ink-2);
+         background:var(--glass-lit); border:1px solid var(--glass-line);
+         border-radius:4px; padding:4px 9px; }
+  .tag.pay { color:var(--c); border-color:color-mix(in srgb, var(--c) 45%, transparent);
+             background:transparent; font-weight:600;
+             font-family:"JetBrains Mono",monospace; font-size:11.5px; }
+  .new { font:700 10px/1 "JetBrains Mono",monospace; letter-spacing:.1em;
+         text-transform:uppercase; color:var(--ok);
+         border:1px solid color-mix(in srgb, var(--ok) 45%, transparent);
+         border-radius:4px; padding:5px 8px; }
+  .foot { display:flex; justify-content:space-between; align-items:center; gap:10px;
+          margin-top:auto; padding-top:8px; }
+  .age { font:400 11.5px "JetBrains Mono",monospace; color:var(--muted); }
+  .apply { position:relative; overflow:hidden; isolation:isolate;
+           font:600 13px "Inter Tight",sans-serif; text-decoration:none;
+           color:var(--ink); border:1px solid var(--line); border-radius:var(--r);
+           padding:8px 15px; white-space:nowrap;
+           transition:background var(--dur) var(--ease), color var(--dur) var(--ease),
+                      border-color var(--dur) var(--ease),
+                      box-shadow .28s var(--ease), transform .28s var(--ease); }
 
+  /* Hovering the card only warms the button up. The button keeps its own
+     hover for itself, so the two states stay distinguishable -- otherwise
+     moving the mouse anywhere near a card would fire the whole effect. */
+  .card:hover .apply { border-color:var(--c); color:var(--c); }
+
+  /* The button is wrapped so the plane has something to be positioned against
+     that is not the button itself -- the button clips its own contents to keep
+     the sheen inside it, and the whole point of the plane is that it leaves. */
+  .ship { position:relative; display:inline-block; }
+  /* The flight box hangs off the top-right corner of the button. Everything
+     inside it is measured in its own 170x120 space, which is what lets the
+     plane and the trail share one curve: the plane rides the path with
+     offset-path, and the trail IS that path. They cannot drift apart, because
+     there is only one set of coordinates for them to drift within. */
+  .flight { position:absolute; left:calc(100% - 26px); bottom:18px;
+            width:170px; height:120px; pointer-events:none; overflow:visible;
+            opacity:0; z-index:5; }
+  .flight .trail { position:absolute; inset:0; width:170px; height:120px;
+                   overflow:visible; }
+  .trail path { fill:none; stroke:url(#planeTrail); stroke-linecap:round; }
+
+  /* pathLength="100" in the markup rescales the dash units, so the numbers
+     below are percentages of the curve rather than however many pixels the
+     curve happens to be. A dash of 46 with a gap of 154 gives exactly one
+     segment and never a repeat, and sliding its offset from 46 to -54 walks
+     that segment from the start of the curve to the end -- a tail following
+     the plane, not a line being drawn. */
+  .t1 { stroke-width:2.1; stroke-dasharray:46 154; stroke-dashoffset:46; }
+  .t2 { stroke-width:1.2; stroke-dasharray:28 172; stroke-dashoffset:28;
+        opacity:.65; transform:translate(3px,4px); }
+
+  .plane { position:absolute; left:0; top:0; width:30px; height:21px;
+           offset-path:path("M14 108 C 52 100, 84 82, 106 58 S 140 26, 160 8");
+           offset-rotate:auto; offset-anchor:50% 50%; offset-distance:0%;
+           filter:drop-shadow(0 0 7px rgba(180,182,239,.55)); }
+
+  .ship:hover .flight { opacity:1; }
+  .ship:hover .plane { animation:fly     1.15s cubic-bezier(.36,.02,.2,1) forwards; }
+  .ship:hover .t1    { animation:streak1 1.15s cubic-bezier(.36,.02,.2,1) forwards; }
+  .ship:hover .t2    { animation:streak2 1.15s cubic-bezier(.36,.02,.2,1) forwards; }
+
+  @keyframes fly     { 0% { offset-distance:0%; opacity:0; } 10% { opacity:1; }
+                       78% { opacity:1; } 100% { offset-distance:100%; opacity:0; } }
+  @keyframes streak1 { 0% { stroke-dashoffset:46; opacity:0; } 10% { opacity:.95; }
+                       78% { opacity:.9; } 100% { stroke-dashoffset:-54; opacity:0; } }
+  @keyframes streak2 { 0% { stroke-dashoffset:28; opacity:0; } 14% { opacity:.6; }
+                       78% { opacity:.55; } 100% { stroke-dashoffset:-72; opacity:0; } }
+
+  /* The featured card's button is more than twice the size of a card's, so
+     the flight it launches has to be too -- the small one reads as a spark
+     next to it. Same classes, same curve shape, bigger box. */
+  /* Long and shallow, not short and steep. The first aim sent it climbing
+     straight through the headline; this one runs through the empty band to
+     the right of the tags and leaves by the top corner. */
+  .ship.big .flight { left:calc(100% - 30px); bottom:6px;
+                      width:420px; height:140px; }
+  .ship.big .trail  { width:420px; height:140px; }
+  .ship.big .t1 { stroke-width:2.8; }
+  .ship.big .t2 { stroke-width:1.6; transform:translate(4px,5px); }
+  .plane.big { width:44px; height:31px;
+               offset-path:path("M18 120 C 96 114, 176 98, 250 74 S 356 34, 398 14");
+               filter:drop-shadow(0 0 10px rgba(180,182,239,.6)); }
+
+  /* A browser without offset-path would park the plane at 0,0 instead of
+     flying it, so there it gets the trail on its own rather than a bug. */
+  @supports not (offset-path: path("M0 0 L1 1")) { .plane { display:none; } }
+  @media (prefers-reduced-motion: reduce) { .ship:hover .flight { opacity:0; } }
+  }
+
+  /* Two lights live inside the button, both sitting on z-index:-1. Inside an
+     isolated stacking context that paints them above the button's own
+     background but still underneath the word "Apply", so the text never gets
+     washed out by its own glow. overflow:hidden is what clips them to the
+     pill. */
+
+  /* 1. the bloom: a soft spot that follows the cursor across the button. */
+  .apply::before { content:""; position:absolute; inset:-45%; z-index:-1;
+           opacity:0; transition:opacity .3s var(--ease);
+           background:radial-gradient(90px circle at var(--mx,50%) var(--my,50%),
+                      rgba(255,255,255,.6), transparent 62%); }
+
+  /* 2. the sheen: one bar of light that crosses once on the way in. */
+  .apply::after { content:""; position:absolute; top:0; bottom:0; z-index:-1;
+           left:-65%; width:42%; opacity:0; transform:skewX(-18deg);
+           background:linear-gradient(100deg, transparent,
+                      rgba(255,255,255,.8), transparent); }
+
+  .apply:hover, .apply:focus-visible {
+           color:var(--bg); border-color:transparent; transform:translateY(-1px);
+           background:linear-gradient(135deg,
+                      color-mix(in srgb, var(--c) 58%, #ffffff) 0%,
+                      var(--c) 52%,
+                      color-mix(in srgb, var(--c) 74%, #8ec9f4) 100%);
+           /* Four shadows, not one. The rim keeps the edge crisp, the drop
+              gives it weight, and the last two are the bloom -- a wide one at
+              low alpha is what actually reads as light spilling onto the page
+              rather than a blurry border. */
+           box-shadow:0 0 0 1px color-mix(in srgb, var(--c) 60%, transparent),
+                      0 7px 18px -5px color-mix(in srgb, var(--c) 85%, transparent),
+                      0 0 34px -2px color-mix(in srgb, var(--c) 55%, transparent),
+                      0 0 78px 6px color-mix(in srgb, var(--c) 30%, transparent); }
+  .apply:hover::before, .apply:focus-visible::before { opacity:1; }
+  .apply:hover::after  { animation:sheen .8s var(--ease); }
+  @keyframes sheen { 0%   { left:-65%; opacity:0; }
+                     14%  { opacity:1; }
+                     100% { left:118%; opacity:0; } }
+  @media (prefers-reduced-motion: reduce) {
+    .apply:hover::after { animation:none; }
+    .apply:hover { transform:none; }
+  }
+
+  /* Cards are visible at rest. The entrance only ever runs if JS is there to
+     add .reveal, so no-JS and reduced-motion users see the page complete. */
+  .grid.reveal .card:nth-child(-n+16) { opacity:0; transform:translateY(14px); }
+  @media (prefers-reduced-motion: reduce) {
+    html { scroll-behavior:auto; }
+    .grid.reveal .card:nth-child(-n+16) { opacity:1; transform:none; }
+    * { transition-duration:.01ms !important; }
+  }
+
+  .empty { padding:70px 0 90px; color:var(--muted); text-align:center; }
+  .empty b { display:block; color:var(--ink); font:700 1.15rem/1.3 Archivo,sans-serif;
+             margin-bottom:9px; }
+  .empty button { margin-top:18px; cursor:pointer; color:var(--bg);
+                  background:var(--berry); border:0; border-radius:999px;
+                  font:600 14px "Inter Tight",sans-serif; padding:11px 20px; }
+  .empty button:hover { filter:brightness(1.08); }
+  footer { border-top:1px solid var(--line-soft); padding:26px 0 60px;
+           color:var(--muted); font-size:13px; }
+  footer a { color:var(--berry); text-decoration:none; }
+  footer a:hover { text-decoration:underline; }
+  /* ---------- the opening: a berry with a lit fuse ----------
+     A WebGL scene pinned to the top of the page. Scroll burns the fuse down
+     the stem, blows the bunch apart, and the headline arrives with the blast.
+     Same scrubbing idea as the featured card -- scroll position is the
+     playhead -- but drawn on a canvas rather than in the DOM. */
+  .berry { position:relative; height:360vh; }
+  .berrypin { position:sticky; top:0; height:100svh; overflow:hidden; }
+  .berrypin canvas { position:absolute; inset:0; width:100%; height:100%;
+                     display:block; }
+  /* The words sit over the canvas, centred, and arrive one beat at a time. */
+  .btitle { position:absolute; inset:0; display:grid; place-content:center;
+            text-align:center; pointer-events:none; z-index:3; padding:0 24px; }
+  .btitle::before { content:""; position:absolute; left:50%; top:50%;
+            width:min(1100px,120vw); height:52vh; transform:translate(-50%,-50%);
+            background:radial-gradient(ellipse at center,
+                       color-mix(in srgb, var(--bg) 82%, transparent) 0%,
+                       transparent 68%);
+            pointer-events:none; }
+  .btitle > * { position:relative; }
+  .bl { display:block; opacity:0; transform:translateY(26px);
+        transition:opacity .55s var(--ease), transform .55s var(--ease);
+        text-shadow:0 6px 40px rgba(0,0,0,.75); }
+  .bl.on { opacity:1; transform:none; }
+  .bl.kick { font:700 11px/1 "JetBrains Mono",monospace; letter-spacing:.28em;
+             text-transform:uppercase; color:var(--muted); margin-bottom:20px; }
+  .bl.big { font:800 clamp(2.4rem,7vw,5.2rem)/.96 Archivo,sans-serif;
+            letter-spacing:-.045em; color:var(--ink); }
+  .bl.big .n { color:var(--berry); font-variant-numeric:tabular-nums; }
+  .bl.sml { margin-top:18px; font:500 1.02rem/1.5 "Inter Tight",sans-serif;
+            color:var(--ink-2); }
+  .bhint { position:absolute; left:50%; bottom:34px; transform:translateX(-50%);
+           font:700 10px/1 "JetBrains Mono",monospace; letter-spacing:.28em;
+           text-transform:uppercase; color:var(--muted); z-index:3;
+           transition:opacity .4s var(--ease); }
+  .bhint i { display:block; width:1px; height:26px; margin:10px auto 0;
+             background:linear-gradient(180deg,var(--muted),transparent); }
+  /* No WebGL, or reduced motion: the section collapses instead of leaving a
+     360vh hole with a blank canvas in it. */
+  .berry.flat { height:auto; }
+  .berry.flat .berrypin { position:static; height:auto; padding:110px 0 70px; }
+  .berry.flat canvas, .berry.flat .bhint { display:none; }
+  .berry.flat .bl { opacity:1; transform:none; }
+
+  /* ---------- atmosphere ---------- */
+  .drops { position:fixed; inset:0; z-index:0; pointer-events:none;
+           overflow:hidden; }
+  .drop { position:absolute; border-radius:999px; will-change:transform;
+          background:linear-gradient(160deg, #7ec8f2 0%, #b4b6ef 45%, #f2a9e2 100%); }
+
+  /* Content sits above the atmosphere. Without this the capsules would drift
+     over the job cards and make them unreadable.
+     The header is deliberately NOT in this list. It is sticky, and naming it
+     here set position:relative on it, which silently cancelled that -- the
+     header had not been sticking for a while. It only ever needed a z-index,
+     and it has one already. */
+  main, footer { position:relative; z-index:2; }
+
+  /* ---------- scroll rail ---------- */
+  .rail { display:none; }
+  .rail-line { position:absolute; left:7px; top:0; bottom:0; width:2px;
+               background:linear-gradient(180deg,
+                 transparent 0%, var(--line) 12%,
+                 var(--line) 88%, transparent 100%); }
+  .bead { position:absolute; left:0; top:0; width:16px; height:16px;
+          border-radius:50%; will-change:transform;
+          /* the light source sits top-left, which is what stops it reading as
+             a flat dot and starts it reading as a bead on a wire */
+          background:radial-gradient(circle at 32% 28%,
+                     #ffe9f1 0%, var(--berry) 46%, #7d2b48 100%);
+          box-shadow:0 0 18px -2px var(--berry); }
+
+  /* ---------- the number that lands ---------- */
+  .flick { font-variant-numeric:tabular-nums; }
+  .scanline { margin:20px 0 0; font-family:"JetBrains Mono",monospace;
+              font-size:.8rem; letter-spacing:.06em; color:var(--muted); }
+  .scanline b { color:var(--ink-2); font-weight:700;
+                font-variant-numeric:tabular-nums; }
+
+  .c-0{--c:var(--teal);} .c-1{--c:var(--berry);} .c-2{--c:var(--rust);}
+/* ---------- matte charcoal + contained gold sweep ---------- */
+:root {
+  --bg:#0d0f12; --bg-2:#171a1f; --card:#171a1f; --card-2:#20242b;
+  --line:#30353d; --line-soft:#242932;
+  --ink:#f4f2ed; --ink-2:#c6c8cc; --muted:#9298a1;
+  --glass:rgba(23,26,31,.78); --glass-2:rgba(31,35,42,.88);
+  --glass-line:rgba(255,255,255,.10); --glass-lit:rgba(255,255,255,.055);
+}
+body { background:
+  radial-gradient(1100px 680px at 50% -12%, rgba(63,70,84,.20), transparent 62%),
+  radial-gradient(760px 620px at 104% 42%, rgba(35,42,54,.20), transparent 66%),
+  radial-gradient(720px 560px at -8% 84%, rgba(39,31,46,.15), transparent 68%),
+  linear-gradient(145deg,#020304 0%,#080b10 43%,#12161d 68%,#030405 100%); }
+.pcard { isolation:isolate; overflow:visible; }
+.pcard > * { position:relative; z-index:1; }
+@property --gold-angle { syntax:"<angle>"; inherits:false; initial-value:0deg; }
+.pcard::after {
+  content:""; position:absolute; inset:-4px; padding:4px; z-index:2; pointer-events:none;
+  border-radius:26px;
+  background:conic-gradient(from var(--gold-angle),
+    transparent 0deg 228deg,
+    rgba(204,145,73,.12) 242deg,
+    #cc9149 262deg,
+    #fff3a5 278deg,
+    #cc9149 295deg,
+    rgba(204,145,73,.1) 313deg,
+    transparent 330deg 360deg);
+  -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);
+  -webkit-mask-composite:xor; mask-composite:exclude;
+  filter:drop-shadow(0 0 8px rgba(204,145,73,.72)) drop-shadow(0 0 28px rgba(204,145,73,.30));
+  animation:gold-sweep 7s linear infinite;
+}
+@keyframes gold-sweep { to { --gold-angle:360deg; } }
+@media (prefers-reduced-motion:reduce) { .pcard::after { animation:none; } }
+/* Pulsating Border treatment: each card's outside light follows its own
+   category accent (teal, berry pink, or rust orange). */
+@property --pulse-angle { syntax:"<angle>"; inherits:false; initial-value:0deg; }
+.card.pulse-border { isolation:isolate; border-color:color-mix(in srgb,var(--c) 70%,#fff); }
+.card.pulse-border::after {
+  content:""; position:absolute; inset:-2px; z-index:2; padding:2px;
+  border-radius:calc(var(--r) + 2px); pointer-events:none;
+  background:conic-gradient(from var(--pulse-angle),
+    color-mix(in srgb,var(--c) 44%,transparent) 0deg 208deg,
+    color-mix(in srgb,var(--c) 70%,transparent) 234deg,
+    var(--c) 263deg,
+    color-mix(in srgb,var(--c) 82%,#fff) 280deg,
+    var(--c) 300deg,
+    color-mix(in srgb,var(--c) 48%,transparent) 332deg,
+    color-mix(in srgb,var(--c) 44%,transparent) 360deg);
+  -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);
+  -webkit-mask-composite:xor; mask-composite:exclude;
+  filter:drop-shadow(0 0 5px color-mix(in srgb,var(--c) 82%,transparent))
+         drop-shadow(0 0 15px color-mix(in srgb,var(--c) 30%,transparent));
+  animation:pulse-spectrum 5.8s linear infinite, pulse-bloom 1.8s ease-in-out infinite;
+}
+.card.pulse-border:nth-child(3n+2)::after { animation-delay:-1.9s,-.8s; }
+.card.pulse-border:nth-child(3n)::after { animation-delay:-3.8s,-1.6s; }
+.card:not(.pulse-border):hover, .card:focus-within {
+  box-shadow:0 0 0 1px color-mix(in srgb,var(--c) 85%,transparent),
+             0 0 14px color-mix(in srgb,var(--c) 30%,transparent),
+             inset 0 1px 0 rgba(255,255,255,.08);
+}
+@keyframes pulse-spectrum { to { --pulse-angle:360deg; } }
+@keyframes pulse-bloom {
+  0%,100% { opacity:.62; filter:drop-shadow(0 0 4px color-mix(in srgb,var(--c) 62%,transparent)) drop-shadow(0 0 10px color-mix(in srgb,var(--c) 18%,transparent)); }
+  50% { opacity:1; filter:drop-shadow(0 0 11px color-mix(in srgb,var(--c) 98%,#fff)) drop-shadow(0 0 32px color-mix(in srgb,var(--c) 44%,transparent)); }
+}
+@media (prefers-reduced-motion:reduce) {
+  .card.pulse-border::after { animation:none; }
+}
+/* Fluid-text fallback for this standalone HTML page. It keeps the two display
+   titles highly legible while a soft, liquid highlight passes through them. */
+.fluid-title {
+  background:linear-gradient(105deg,#fff8ef 0%,#fff8ef 28%,#9bdcff 46%,#f0a1df 55%,#fff8ef 70%,#fff8ef 100%);
+  background-size:240% 100%; background-position:0% 50%;
+  -webkit-background-clip:text; background-clip:text; color:transparent;
+  -webkit-text-fill-color:transparent;
+  animation:fluid-text-flow 8s cubic-bezier(.45,0,.55,1) infinite;
+}
+.fluid-title .n { color:inherit; }
+@keyframes fluid-text-flow {
+  0%,100% { background-position:0% 50%; }
+  50% { background-position:100% 50%; }
+}
+@media (prefers-reduced-motion:reduce) { .fluid-title { animation:none; } }
+/* The hero stays deliberately editorial: no animated gradient lettering or
+   decorative pill competing with the listing count. */
+.hero h1.big { max-width:760px; letter-spacing:-.05em; }
+.hero h1.big .pill { display:none; }
+.hero h1.big .n { color:var(--berry); }
 </style></head><body>
 
 <!-- Scroll rail. Fixed to the side, the bead tracks how far down the page you
@@ -676,7 +992,7 @@ TEMPLATE = """<!DOCTYPE html>
         <div class="ptop">
           <span class="plogo" id="plogo">@@FEATLOGO@@</span>
           <div>
-            <h2>@@FEATTITLE@@</h2>
+            <h2 class="fluid-title">@@FEATTITLE@@</h2>
             <div class="pco">@@FEATCO@@</div>
           </div>
         </div>
@@ -818,7 +1134,7 @@ function card(j) {
   if (j.work_type) tags.push(`<span class="tag">${esc(j.work_type)}</span>`);
   tags.push(`<span class="tag">${esc(j.location)}</span>`);
   if (j.age >= 0 && j.age <= NEW_WITHIN) tags.push(`<span class="new">New</span>`);
-  return `<article class="card c-${i}">
+  return `<article class="card c-${i} pulse-border">
     <div class="top">${badge}<div>
       <h2><a class="tlink" href="${esc(j.url)}" target="_blank" rel="noopener">${esc(j.title)}</a></h2>
       <div class="co">${esc(j.company || j.category)}</div></div></div>
@@ -1011,6 +1327,10 @@ function markPoints(inner) {
 function atmosphere() {
   const host = document.getElementById("drops");
   if (!host || reduced) return;
+  // Every capsule is positioned by GSAP. If the CDN is slow or blocked, a bare
+  // reference here throws at the top level and takes the rest of the page's
+  // script with it -- including the hero's own fallback. Leave instead.
+  if (!window.gsap) return;
 
   // The capsules are the only atmosphere on the page now, so there are a lot
   // more of them than when they shared the screen with something else.
@@ -1174,6 +1494,8 @@ syncControls();
 render(true);
 flickTo(document.getElementById("bignum"), JOBS.length, 1000);
 flickTo(document.getElementById("scanned"), SCANNED, 1400);
+atmosphere();
+heroPill();
 
 /* ---- the opening scene ------------------------------------------------------
    A berry with a lit fuse, drawn in WebGL. Scroll burns the fuse down the stem,
@@ -1604,6 +1926,7 @@ function berryScene() {
     raf = requestAnimationFrame(frame);
   }
 }
+berryScene();
 
 /* ---- the featured role -----------------------------------------------------
    One scrubbed timeline: scroll position is the playhead, so scrolling back up
@@ -1618,14 +1941,10 @@ function berryScene() {
 function featured() {
   const stage = document.getElementById("stage");
   if (!stage) return;
-  stage.classList.add("flat");
-  const t = document.getElementById("ptxt");
-  if (t) t.textContent = "Featured role";
-  return;
   if (reduced || !window.gsap || !window.ScrollTrigger) {
     stage.classList.add("flat");
-    const t2 = document.getElementById("ptxt");
-    if (t2) t2.remove();
+    const t = document.getElementById("ptxt");
+    if (t) t.remove();
     return;
   }
 
