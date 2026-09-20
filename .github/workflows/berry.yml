@@ -157,8 +157,13 @@ jobs:
         run: |
           git config user.name  "berry bot"
           git config user.email "actions@github.com"
-          git add -A output pipeline_scripts/*.json pipeline_scripts/logos \
-                       pipeline_scripts/berry_internships.html
+          # -A over the whole tree. .gitignore already states exactly what
+          # must not be committed, so naming paths here only duplicates it --
+          # and naming pipeline_scripts/*.json pulled in ig_posts.json, which
+          # IS ignored. git exits non-zero when an ignored path is named
+          # outright, and this step runs under `bash -e`, so every run died
+          # here the moment if:always() let it run at all.
+          git add -A
           if git diff --cached --quiet; then
             echo "nothing changed"
           else
