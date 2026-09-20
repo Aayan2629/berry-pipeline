@@ -99,28 +99,31 @@ def now():
 # -- it is just not poked at.
 BLOCK_SUBCODE = "2207051"
 BLOCK_COOLDOWN_HOURS = 6
-STATUS_FILE = os.path.join(HERE, "status.json")
+# Its own file, not status.json: the workflow rewrites status.json at the start
+# of every run, so anything recorded there is gone before the next run reads it.
+# This one is only ever written here and rides home with the state commit.
+BLOCK_FILE = os.path.join(HERE, "ig_block.json")
+
+
+def note_block(detail):
+    """Remember that Meta said no, so the next run does not ask again."""
+    try:
+        with open(BLOCK_FILE, "w", encoding="utf-8") as f:
+            json.dump({"at": datetime.now(SYDNEY).isoformat(timespec="seconds"),
+                       "subcode": BLOCK_SUBCODE,
+                       "detail": str(detail)[:400]}, f, indent=2)
+    except OSError:
+        pass          # bookkeeping must never be the thing that breaks a run
 
 
 def blocked_recently():
     """How long is left on a self-imposed cooldown, or None."""
     try:
-        with open(STATUS_FILE, encoding="utf-8") as f:
-            last = json.load(f).get("last_post") or {}
+        with open(BLOCK_FILE, encoding="utf-8") as f:
+            when = datetime.fromisoformat(json.load(f)["at"])
     except Exception:
         return None
-    # The log, not the outcome: a run that backed off is recorded as a success
-    # (it did the right thing), and that must not read as "the block cleared".
-    # The message printed on backing off names the subcode for exactly this
-    # reason, so a chain of back-to-back runs keeps its hands off. The first
-    # run after the block really lifts logs a publish with no subcode in it,
-    # and the cooldown ends there.
-    if BLOCK_SUBCODE not in " ".join(str(x) for x in (last.get("log") or [])):
-        return None
-    try:
-        when = datetime.fromisoformat(last["at"]).astimezone(SYDNEY).replace(tzinfo=None)
-    except Exception:
-        return None
+    when = when.replace(tzinfo=None)
     left = timedelta(hours=BLOCK_COOLDOWN_HOURS) - (now() - when)
     return left if left.total_seconds() > 0 else None
 
@@ -431,6 +434,8 @@ def publish(carousel, env, dry_run=False):
         # 2207027 is "not ready yet" and is worth another go; anything else
         # is a real error and should stop here rather than be retried blind.
         if "2207027" not in published["_error"] or attempt == 5:
+            if BLOCK_SUBCODE in published["_error"]:
+                note_block(published["_error"])
             sys.exit(f"\nPublishing failed (HTTP {published['_http']}):\n"
                      f"{published['_error']}")
         print(f"    not ready yet, waiting... (attempt {attempt})")
