@@ -1,9 +1,14 @@
 {
   "ig_token_obtained": "2026-09-02",
-  "updated_at": "2026-09-20T09:43:44+00:00",
+  "updated_at": "2026-09-20T09:58:59+00:00",
+  "last_deploy": {
+    "outcome": "failure",
+    "at": "2026-09-20T10:05:52+00:00",
+    "detail": "sent: 101 internships, updated 20 Sep 2026 | site=2402c195... sha1=0f9fd4c85c |   Netlify said no (HTTP 403):\n  {\"error\":\"Account credit usage exceeded - new deploys are blocked until credits are added\"}"
+  },
   "last_post": {
     "outcome": "failure",
-    "at": "2026-09-20T09:51:24+00:00",
+    "at": "2026-09-20T10:06:49+00:00",
     "log": [
       "    slide 1 ok",
       "    slide 2 ok",
@@ -18,7 +23,7 @@
       "    still processing the carousel... (2s)",
       "  publishing...",
       "Publishing failed (HTTP 403):",
-      "{\"error\":{\"message\":\"Application request limit reached\",\"type\":\"OAuthException\",\"is_transient\":false,\"code\":4,\"error_subcode\":2207051,\"error_user_title\":\"action is blocked\",\"error_user_msg\":\"We restrict certain activity to protect our community. Tell us if you think we made a mistake.\",\"fbtrace_id\":\"AGw8LRPslNfK0MGcY3LB7sv\"}}"
+      "{\"error\":{\"message\":\"Application request limit reached\",\"type\":\"OAuthException\",\"is_transient\":false,\"code\":4,\"error_subcode\":2207051,\"error_user_title\":\"action is blocked\",\"error_user_msg\":\"We restrict certain activity to protect our community. Tell us if you think we made a mistake.\",\"fbtrace_id\":\"AgEvUUu28sbhdbsJJKLzOv5\"}}"
     ]
   }
 }
