@@ -82,6 +82,42 @@ SITE_NAME = "internberry"
 REMOTE_PATH = "/index.html"
 
 
+# --- saying, afterwards, what happened ---------------------------------------
+# refresh.py runs this step as optional, so a failed deploy leaves a green run
+# and a site that quietly goes stale -- the exact failure this script exists to
+# prevent, moved one level up. On GitHub the log is unreadable without signing
+# in and expires anyway, so the outcome is written next to the publish outcome
+# in status.json and rides home with the run's state commit.
+STATUS = os.path.join(HERE, "status.json")
+NOTE = []
+
+
+def _redact(text):
+    return re.sub(r"(nfp_[A-Za-z0-9_]{10,}|ghp_[A-Za-z0-9_]{10,}|IGA[A-Za-z0-9_-]{20,})",
+                  "***", str(text))
+
+
+def record(outcome, detail=""):
+    import datetime, json
+    try:
+        data = json.load(open(STATUS, encoding="utf-8")) if os.path.exists(STATUS) else {}
+    except Exception:
+        data = {}
+    if not isinstance(data, dict):
+        data = {}
+    bits = [b for b in NOTE + [detail] if b]
+    data["last_deploy"] = {
+        "outcome": outcome,
+        "at": datetime.datetime.now(datetime.timezone.utc).isoformat(timespec="seconds"),
+        "detail": _redact(" | ".join(bits))[:700],
+    }
+    try:
+        with open(STATUS, "w", encoding="utf-8") as f:
+            json.dump(data, f, indent=2)
+    except Exception:
+        pass          # never let bookkeeping be the thing that fails a deploy
+
+
 def load_env():
     """Read .env. Values are never printed -- a token in a log is exactly as
     leaked as a token anywhere else."""
@@ -179,6 +215,7 @@ def summarise(html):
 def deploy(token, site_id, body):
     digest = hashlib.sha1(body).hexdigest()
 
+    NOTE.append(f"site={site_id[:8]}... sha1={digest[:10]}")
     print("  telling Netlify what we have...")
     r = requests.post(f"{API}/sites/{site_id}/deploys", headers=headers(token),
                       json={"files": {REMOTE_PATH: digest}}, timeout=60)
@@ -208,6 +245,7 @@ def deploy(token, site_id, body):
         state = s.get("state")
         if state == "ready":
             print(" done")
+            NOTE.append(f"deploy {s.get('id','?')} ready")
             return s
         if state == "error":
             sys.exit(f"\n  Netlify errored: {s.get('error_message')}")
@@ -252,6 +290,7 @@ def main():
         print(site_id)
         return 0
 
+    NOTE.append("sent: " + summarise(body.decode("utf-8", "ignore")))
     print(f"\nDeploying {summarise(body.decode('utf-8', 'ignore'))}")
     deploy(token, site_id, body)
     print(f"\n  https://{SITE_NAME}.netlify.app/\n")
@@ -259,4 +298,15 @@ def main():
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    try:
+        code = main()
+    except SystemExit as e:
+        bad = e.code not in (0, None)
+        record("failure" if bad else "ok",
+               e.code if isinstance(e.code, str) else "")
+        raise
+    except Exception as e:                      # noqa: BLE001 -- record, then re-raise
+        record("failure", f"{type(e).__name__}: {e}")
+        raise
+    record("ok" if code == 0 else "failure")
+    sys.exit(code)
