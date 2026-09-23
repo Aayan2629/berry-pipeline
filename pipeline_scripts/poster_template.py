@@ -1126,53 +1126,56 @@ def build_cover(category, count, out_dir, account_handle="[your account handle]"
     img.alpha_composite(scrim)
     draw = ImageDraw.Draw(img)
 
-    # ---- the headline ------------------------------------------------------
-    # The category goes in a small pill above rather than into the headline.
-    # "Finance & business internships in Sydney" is three lines of medium
-    # type; "Internships in Sydney" is two lines of huge type, and huge type
-    # is the only kind that survives being a thumbnail in a feed. The pill
-    # still tells you which carousel this is.
-    headline = "Internships in Sydney"
-    for size in (132, 118, 104, 92):
+    # ---- the headline: the CATEGORY is the headline (option B) --------------
+    # The category used to sit in a thin outline pill over "Internships in
+    # Sydney". In the profile grid that pill was unreadable, and the category
+    # is the ONLY thing that tells one cover from the next. So now the
+    # category is the huge line and "internships in Sydney" is the small one.
+    #
+    # SAFE ZONE: posts are 1080 x 1080, but Instagram's profile grid shows
+    # every post cropped to 3:4 -- only the middle 810px. Anything wider gets
+    # chopped (that's how "Internships in" became "nternships ir"). So no
+    # line of text may be wider than SAFE_W.
+    SAFE_W = 740
+    short = SHORT_CATEGORY.get((category or "").strip(), category or "Internships")
+    # "TECH & DATA" -> ["TECH &", "DATA"] so it stacks onto two big lines.
+    # .replace() + .split() is like strtok in C: cut the string at a marker.
+    words = short.upper().replace(" & ", " &\n").split("\n")
+    for size in (150, 136, 124, 112, 100, 90):
         f_big = _font("DejaVuSans-Bold.ttf", size)
-        lines = _wrap(draw, headline, f_big, W - 130)
-        if len(lines) <= 2:
+        # max(... for w in words) is a generator: the widest line, like
+        # looping over an array in C and keeping the biggest value.
+        if max(draw.textlength(w, font=f_big) for w in words) <= SAFE_W:
             break
-    line_h = int(size * 1.14)
-    block_h = len(lines) * line_h
-    y = (H - block_h) / 2 - 40
+    line_h = int(size * 1.08)
+    y = 230 if len(words) > 1 else 300
 
-    # The pill is placed OFF the headline rather than at a fixed height. At a
-    # fixed 300 it sat exactly where a two-line headline starts and the two
-    # printed on top of each other.
-    short = SHORT_CATEGORY.get((category or "").strip(), category or "")
-    if short:
-        f_eb = _font("DejaVuSans-Bold.ttf", 30)
-        label = short.upper()
-        tw = draw.textlength(label, font=f_eb)
-        pw, ph = tw + 52, 60
-        ex, ey = (W - pw) / 2, y - ph - 44
-        draw.rounded_rectangle([ex, ey, ex + pw, ey + ph], radius=ph / 2,
-                               outline=(255, 255, 255, 230), width=3)
-        draw.text((ex + 26, ey + 13), label, font=f_eb, fill=(255, 255, 255))
-
-    # A soft shadow under the type rather than a box behind it: the point of
-    # the cover is the photograph, and a panel would cover it up.
+    # soft shadow under the big type, so it reads on any photo
     shadow = Image.new("RGBA", (W, H), (0, 0, 0, 0))
     shd = ImageDraw.Draw(shadow)
     yy = y
-    for line in lines:
-        lw = draw.textlength(line, font=f_big)
-        shd.text(((W - lw) / 2, yy + 6), line, font=f_big, fill=(0, 0, 0, 130))
+    for w in words:
+        lw = draw.textlength(w, font=f_big)
+        shd.text(((W - lw) / 2, yy + 6), w, font=f_big, fill=(0, 0, 0, 150))
         yy += line_h
-    img.alpha_composite(shadow.filter(ImageFilter.GaussianBlur(16)))
+    f_sub = _font("DejaVuSans-Bold.ttf", 50)
+    sub = "internships in Sydney"
+    sub_w = draw.textlength(sub, font=f_sub)
+    shd.text(((W - sub_w) / 2, yy + 58), sub, font=f_sub, fill=(0, 0, 0, 150))
+    img.alpha_composite(shadow.filter(ImageFilter.GaussianBlur(14)))
     draw = ImageDraw.Draw(img)
 
     yy = y
-    for line in lines:
-        lw = draw.textlength(line, font=f_big)
-        draw.text(((W - lw) / 2, yy), line, font=f_big, fill=(255, 255, 255))
+    for w in words:
+        lw = draw.textlength(w, font=f_big)
+        draw.text(((W - lw) / 2, yy), w, font=f_big, fill=(255, 255, 255))
         yy += line_h
+
+    # a short bar in the category colour, then the small line
+    draw.rounded_rectangle([W / 2 - 70, yy + 16, W / 2 + 70, yy + 30],
+                           radius=7, fill=ink)
+    draw.text(((W - sub_w) / 2, yy + 52), sub, font=f_sub, fill=(255, 255, 255))
+    yy += 150
 
     # ---- the bubble --------------------------------------------------------
     n_intern = count - n_grad
@@ -1182,7 +1185,7 @@ def build_cover(category, count, out_dir, account_handle="[your account handle]"
         msg = f"{n_grad} grad roles, open now"
     else:
         msg = f"{count} open right now" if count != 1 else "1 open right now"
-    _bubble(draw, W / 2, yy + 56, msg, _font("DejaVuSans.ttf", 38))
+    _bubble(draw, W / 2, yy, msg, _font("DejaVuSans-Bold.ttf", 40))
 
     # ---- chrome ------------------------------------------------------------
     _camera_chrome(img, draw)
