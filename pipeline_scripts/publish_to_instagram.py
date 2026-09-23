@@ -399,6 +399,46 @@ def _went_out_anyway(user_id, token, caption):
     return None
 
 
+def _listing_ids(text):
+    """Every long run of digits in a caption -- the Seek/LinkedIn job ids.
+    re.findall is like a loop of sscanf in C: pull out every match."""
+    import re
+    return set(re.findall(r"\d{7,}", text or ""))
+
+
+def _already_on_instagram(user_id, token, caption, days=21):
+    """The post id if a post from the last `days` days already carries most of
+    this carousel's job links, else None.
+
+    This is the duplicate guard. It asks Instagram itself rather than trusting
+    posted_history.json, because the history file is exactly what went wrong
+    on 20-23 Sep: Meta posted, answered with an error, nothing was written
+    down, and the same carousel went out three times. Matching on the job
+    ids (not the caption text) means a NEW carousel with the same heading,
+    e.g. "6 Technology, Data & AI (part 1)", is still allowed."""
+    from datetime import timezone
+    ours = _listing_ids(caption)
+    if not ours:
+        return None
+    try:
+        r = requests.get(f"{API}/{user_id}/media",
+                         params={"fields": "id,caption,timestamp", "limit": 25,
+                                 "access_token": token}, timeout=30)
+        if r.status_code != 200:
+            return None
+        now_utc = datetime.now(timezone.utc).replace(tzinfo=None)
+        for m in r.json().get("data", []):
+            when = datetime.strptime(m["timestamp"][:19], "%Y-%m-%dT%H:%M:%S")
+            if now_utc - when > timedelta(days=days):
+                continue
+            overlap = len(ours & _listing_ids(m.get("caption")))
+            if overlap >= max(1, len(ours) // 2):     # half or more of our jobs
+                return m["id"]
+    except Exception:
+        pass
+    return None
+
+
 def publish(carousel, env, dry_run=False):
     folder = os.path.join(QUEUE, carousel)
     caption_path = os.path.join(folder, "caption.txt")
@@ -406,6 +446,13 @@ def publish(carousel, env, dry_run=False):
         os.path.exists(caption_path) else ""
 
     print(f"Carousel: {carousel}")
+
+    if not dry_run:
+        dup = _already_on_instagram(env["IG_USER_ID"], env["IG_ACCESS_TOKEN"], caption)
+        if dup:
+            print(f"  These jobs are already on Instagram (post {dup}).")
+            print("  Not posting them again -- recording it as posted instead.")
+            return dup
 
     print("  putting slides online...")
     urls = upload(carousel)
@@ -464,14 +511,14 @@ def publish(carousel, env, dry_run=False):
         # 2207027 is "not ready yet" and is worth another go; anything else
         # is a real error and should stop here rather than be retried blind.
         if "2207027" not in published["_error"] or attempt == 5:
-            if BLOCK_SUBCODE in published["_error"]:
-                note_block(published["_error"])
             print("  Meta said no -- checking whether it went out anyway...")
             real_id = _went_out_anyway(user_id, token, caption)
             if real_id:
                 print(f"  It DID go out (post {real_id}). Recording it as posted "
                       "so it is never posted twice.")
                 return real_id
+            if BLOCK_SUBCODE in published["_error"]:
+                note_block(published["_error"])
             sys.exit(f"\nPublishing failed (HTTP {published['_http']}):\n"
                      f"{published['_error']}")
         print(f"    not ready yet, waiting... (attempt {attempt})")
