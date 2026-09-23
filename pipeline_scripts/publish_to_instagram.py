@@ -369,6 +369,36 @@ def wait_ready(container_id, token, label, timeout=180):
              f"Nothing was posted -- run the command again.")
 
 
+def _went_out_anyway(user_id, token, caption):
+    """Meta sometimes publishes the post AND answers with an error (this
+    happened on 23 Sep: posted at 9:46:04, "action is blocked" at 9:46:10).
+    Treating that as a failure is dangerous -- the carousel stays in the
+    queue and gets posted a second time. So before giving up, ask Instagram
+    for the newest posts and look for ours.
+
+    Returns the post id if it is there, else None. Never raises: if even
+    this check fails we fall back to the old behaviour (report the error)."""
+    first_line = (caption or "").strip().splitlines()[0][:60] if caption else ""
+    for wait in (5, 15, 30):          # give Instagram a moment to list it
+        time.sleep(wait)
+        try:
+            r = requests.get(f"{API}/{user_id}/media",
+                             params={"fields": "id,caption,timestamp",
+                                     "limit": 5, "access_token": token},
+                             timeout=30)
+            if r.status_code != 200:
+                continue
+            for m in r.json().get("data", []):
+                when = datetime.strptime(m["timestamp"][:19], "%Y-%m-%dT%H:%M:%S")
+                fresh = datetime.utcnow() - when < timedelta(minutes=15)
+                same = first_line and (m.get("caption") or "").strip().startswith(first_line)
+                if fresh and same:
+                    return m["id"]
+        except Exception:
+            pass
+    return None
+
+
 def publish(carousel, env, dry_run=False):
     folder = os.path.join(QUEUE, carousel)
     caption_path = os.path.join(folder, "caption.txt")
@@ -436,6 +466,12 @@ def publish(carousel, env, dry_run=False):
         if "2207027" not in published["_error"] or attempt == 5:
             if BLOCK_SUBCODE in published["_error"]:
                 note_block(published["_error"])
+            print("  Meta said no -- checking whether it went out anyway...")
+            real_id = _went_out_anyway(user_id, token, caption)
+            if real_id:
+                print(f"  It DID go out (post {real_id}). Recording it as posted "
+                      "so it is never posted twice.")
+                return real_id
             sys.exit(f"\nPublishing failed (HTTP {published['_http']}):\n"
                      f"{published['_error']}")
         print(f"    not ready yet, waiting... (attempt {attempt})")
