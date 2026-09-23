@@ -1,0 +1,19 @@
+{
+ "assigned": {
+  "business-commerce-marketing-finance-part1@2026-W39": "background pics/cafe_laptop_11.jpg",
+  "business-commerce-marketing-finance-part2@2026-W39": "background pics/cafe_laptop_10.jpg",
+  "technology-data-ai-part1@2026-W39": "background pics/library_07.jpg",
+  "technology-data-ai-part2@2026-W39": "background pics/cafe_work_12.jpg",
+  "engineering-part1@2026-W39": "background pics/notebook_coffee_13.jpg",
+  "engineering-part2@2026-W39": "background pics/desk_workspace_04.jpg"
+ },
+ "last_used": {
+  "background pics/cafe_laptop_11.jpg": 1,
+  "background pics/cafe_laptop_10.jpg": 2,
+  "background pics/library_07.jpg": 3,
+  "background pics/cafe_work_12.jpg": 4,
+  "background pics/notebook_coffee_13.jpg": 5,
+  "background pics/desk_workspace_04.jpg": 6
+ },
+ "counter": 6
+}
