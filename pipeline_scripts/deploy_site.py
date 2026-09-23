@@ -212,6 +212,73 @@ def summarise(html):
             f"updated {d.group(1) if d else '?'}")
 
 
+# --------------------------------------------------------------------------
+# Credit budget (Netlify free plan)
+# --------------------------------------------------------------------------
+# The free plan gives 300 credits a month and CANNOT be topped up. Every
+# production deploy costs 15 credits -- even one where nothing changed -- and
+# page views/bandwidth eat the rest (20 credits per GB). At 0 credits Netlify
+# PAUSES the site ("Site not available") until next month.
+#
+# A deploy every day = 30 x 15 = 450 credits = site down by about day 20.
+# So:
+#   1. If the live file is already identical, don't deploy at all (free).
+#   2. At most one deploy every MIN_DAYS_BETWEEN days.
+#   3. At most MAX_DEPLOYS_PER_MONTH deploys a month.
+# 10 deploys = 150 credits, leaving 150 (~7 GB) for people visiting the site.
+# --force skips 2 and 3 (still logged), for when something is actually broken.
+MAX_DEPLOYS_PER_MONTH = 10
+MIN_DAYS_BETWEEN = 3
+DEPLOY_LOG = os.path.join(HERE, "deploy_log.json")
+
+
+def _load_log():
+    try:
+        import json
+        with open(DEPLOY_LOG) as f:
+            return json.load(f)
+    except Exception:
+        return {"deploys": []}          # ISO timestamps of real deploys
+
+
+def budget_says_no(log):
+    """A reason string if we should skip this deploy, else None."""
+    from datetime import datetime, timedelta
+    now = datetime.now()
+    stamps = [datetime.fromisoformat(t) for t in log.get("deploys", [])]
+    # list comprehension with a filter: like a for-loop + if in C, in one line
+    this_month = [t for t in stamps if (t.year, t.month) == (now.year, now.month)]
+    if len(this_month) >= MAX_DEPLOYS_PER_MONTH:
+        return (f"already {len(this_month)} deploys this month "
+                f"(limit {MAX_DEPLOYS_PER_MONTH}, ~{len(this_month) * 15} credits)")
+    if stamps and now - max(stamps) < timedelta(days=MIN_DAYS_BETWEEN):
+        return (f"last deploy was {(now - max(stamps)).days} day(s) ago "
+                f"(waits {MIN_DAYS_BETWEEN})")
+    return None
+
+
+def record_deploy(log):
+    import json
+    from datetime import datetime
+    log.setdefault("deploys", []).append(datetime.now().isoformat(timespec="seconds"))
+    log["deploys"] = log["deploys"][-60:]          # keep the file small
+    with open(DEPLOY_LOG, "w") as f:
+        json.dump(log, f, indent=1)
+
+
+def live_file_matches(token, site_id, digest):
+    """True if Netlify is already serving exactly this file. Asking costs no
+    credits; deploying does."""
+    try:
+        r = requests.get(f"{API}/sites/{site_id}/files", headers=headers(token),
+                         timeout=30)
+        r.raise_for_status()
+        return any(f.get("path") == REMOTE_PATH and f.get("sha") == digest
+                   for f in r.json())
+    except Exception:
+        return False
+
+
 def deploy(token, site_id, body):
     digest = hashlib.sha1(body).hexdigest()
 
@@ -261,6 +328,8 @@ def main():
     ap.add_argument("--check", action="store_true",
                     help="compare live against the file, deploy nothing")
     ap.add_argument("--site-id", action="store_true")
+    ap.add_argument("--force", action="store_true",
+                    help="ignore the monthly/3-day budget (still skips if unchanged)")
     args = ap.parse_args()
 
     if not os.path.exists(PAGE):
@@ -290,9 +359,22 @@ def main():
         print(site_id)
         return 0
 
+    digest = hashlib.sha1(body).hexdigest()
+    if live_file_matches(token, site_id, digest):
+        print("  Live site already has this exact file -- no deploy, no credits used.")
+        return 0
+    log = _load_log()
+    reason = budget_says_no(log)
+    if reason and not args.force:
+        print(f"  Skipping deploy to save Netlify credits: {reason}.")
+        print("  (python3 deploy_site.py --force if the live site is actually broken)")
+        NOTE.append("skipped: " + reason)
+        return 0
+
     NOTE.append("sent: " + summarise(body.decode("utf-8", "ignore")))
     print(f"\nDeploying {summarise(body.decode('utf-8', 'ignore'))}")
     deploy(token, site_id, body)
+    record_deploy(log)
     print(f"\n  https://{SITE_NAME}.netlify.app/\n")
     return 0
 
