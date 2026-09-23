@@ -35,6 +35,7 @@ import math
 import json
 import os
 import re
+import zlib
 from html.parser import HTMLParser
 
 from PIL import Image, ImageDraw, ImageFont, ImageFilter
@@ -68,6 +69,8 @@ INK_DARK = (23, 33, 54)
 
 # Short forms, for the cover pill and the FIELD row. The full names are
 # correct but they are four words long and they do not fit anywhere.
+COVER_ALIASES = {"Engineering Internships & Grad Roles": "Engineering"}
+
 SHORT_CATEGORY = {
     "Business, Commerce, Marketing & Finance": "Finance & business",
     "Technology, Data & AI": "Tech & data",
@@ -654,16 +657,97 @@ def _logo_for(business_name, logo_url=None):
         return None
 
 
-def _background(job_id, deep=NAVY_DEEP, dim=0.20, blur=1.2):
+# --------------------------------------------------------------------------
+# Photo rotation
+# --------------------------------------------------------------------------
+# The old rule was "same carousel name -> same photo", worked out from the
+# name's letters. Carousel names repeat every week (technology-data-ai-part1
+# again and again), so every Tech cover got the same wooden desk forever.
+#
+# Now: each carousel gets the photo that was used LONGEST AGO (least recently
+# used), and we remember the choice in background_rotation.json so all the
+# slides of one carousel -- and any rebuild of it in the same week -- share
+# the same photo. Next week the same carousel name gets a fresh photo.
+#
+# Category folders: if "background pics/tech/" (or finance/ or engineering/)
+# has photos, that category only picks from there. Otherwise it picks from
+# every photo in "background pics/" (sub-folders included).
+ROTATION_FILE = os.path.join(HERE, "background_rotation.json")
+CATEGORY_FOLDER = {
+    "Technology, Data & AI": "tech",
+    "Business, Commerce, Marketing & Finance": "finance",
+    "Engineering": "engineering",
+}
+_IMG_EXT = (".jpg", ".jpeg", ".png")
+
+
+def _photos_in(folder, recursive):
+    """Every image file in folder. os.walk is like `ls -R`: it visits the
+    folder and, if recursive, every sub-folder under it."""
+    found = []
+    for root, _dirs, files in os.walk(folder):
+        found += [os.path.join(root, f) for f in files
+                  if f.lower().endswith(_IMG_EXT) and not f.startswith("_")]
+        if not recursive:
+            break
+    return found
+
+
+def _pick_photo(seed, category=None):
+    """The photo path for this carousel/job, or None if there are no photos."""
+    import datetime
+    pool = []
+    sub = CATEGORY_FOLDER.get((category or "").strip())
+    if sub:
+        for folder in BACKGROUND_DIRS:
+            pool += _photos_in(os.path.join(folder, sub), recursive=False)
+    if not pool:                              # no category folder -> use everything
+        for folder in BACKGROUND_DIRS:
+            pool += _photos_in(folder, recursive=True)
+    pool = sorted(set(pool))
+    if not pool:
+        return None
+
+    # Load the memory file. try/except is Python's version of checking a
+    # return code in C: if the file is missing or broken, start fresh.
+    try:
+        with open(ROTATION_FILE) as f:
+            memory = json.load(f)
+    except Exception:
+        memory = {}
+    assigned = memory.setdefault("assigned", {})     # key -> photo file name
+    last_used = memory.setdefault("last_used", {})   # photo file name -> counter
+
+    # the key: the carousel name + this ISO week, e.g. "tech-part1@2026-W39"
+    year, week, _ = datetime.date.today().isocalendar()
+    key = f"{seed}@{year}-W{week:02d}"
+
+    rel = lambda p: os.path.relpath(p, HERE)          # a lambda is a tiny unnamed function
+    by_rel = {rel(p): p for p in pool}                # dict comprehension: build a lookup table
+    if key in assigned and assigned[key] in by_rel:
+        return by_rel[assigned[key]]
+
+    # least recently used: never-used photos count as 0, so they go first.
+    # The hash of seed breaks ties so it isn't always alphabetical.
+    choice = min(by_rel, key=lambda r: (last_used.get(r, 0),
+                                        zlib.crc32((r + str(seed)).encode()) % 1000))
+    memory["counter"] = memory.get("counter", 0) + 1
+    last_used[choice] = memory["counter"]
+    assigned[key] = choice
+    # only keep the newest 300 assignments so the file never grows forever
+    if len(assigned) > 300:
+        for k in list(assigned)[:-300]:
+            del assigned[k]
+    with open(ROTATION_FILE, "w") as f:
+        json.dump(memory, f, indent=1)
+    return by_rel[choice]
+
+
+def _background(job_id, deep=NAVY_DEEP, dim=0.20, blur=1.2, category=None):
     """A dimmed photo from backgrounds/ if any exist, else a gradient.
     Same job always gets the same photo so re-runs look identical."""
-    photos = []
-    for folder in BACKGROUND_DIRS:
-        for ext in ("*.jpg", "*.jpeg", "*.png", "*.JPG", "*.JPEG", "*.PNG"):
-            photos.extend(glob.glob(os.path.join(folder, ext)))
-    photos = sorted(set(photos))
-    if photos:
-        pick = photos[sum(ord(c) for c in str(job_id)) % len(photos)]
+    pick = _pick_photo(job_id, category)
+    if pick:
         try:
             photo = Image.open(pick).convert("RGB")
             # cover-crop to a square, then dim so white text/card pops
@@ -849,7 +933,7 @@ def build_poster(job, out_dir, account_handle="[your account handle]",
     # bg_seed lets a whole carousel share one photo. Without it each job
     # picks its own, which is right for a standalone poster but makes a
     # six-slide carousel look like six unrelated posts.
-    img = _background(bg_seed or job.get("job_id"), deep)
+    img = _background(bg_seed or job.get("job_id"), deep, category=category)
     draw = ImageDraw.Draw(img)
 
     inner_w = W - 2 * CARD_MARGIN - 2 * CARD_PAD
@@ -1108,11 +1192,16 @@ def build_cover(category, count, out_dir, account_handle="[your account handle]"
     """
     os.makedirs(out_dir, exist_ok=True)
 
+    # build_carousels passes "Engineering Internships & Grad Roles" as the
+    # name for engineering. Map it back so the colour, the photo folder and
+    # the big headline all use the real category. (The grad roles already
+    # show in the bubble underneath.)
+    category = COVER_ALIASES.get((category or "").strip(), category)
     ink, deep = palette_for(category)
     # A cover is all photo, so it gets far less dimming than a job slide and
     # no blur at all. The type is protected by the scrims below instead,
     # which darken only the two bands the type sits in.
-    img = _background(seed, deep, dim=0.10, blur=0).convert("RGBA")
+    img = _background(seed, deep, dim=0.10, blur=0, category=category).convert("RGBA")
 
     # top and bottom scrims, so the headline and the chrome have something to
     # sit on without flattening the middle of the picture
@@ -1380,7 +1469,7 @@ def endcard_bar(category, out_dir, account_handle="[your account handle]",
     os.makedirs(out_dir, exist_ok=True)
     ink, deep = palette_for(category)
 
-    img = _background(seed, deep, dim=0.34, blur=1.0).convert("RGBA")
+    img = _background(seed, deep, dim=0.34, blur=1.0, category=category).convert("RGBA")
     scrim = Image.new("RGBA", (W, H), (0, 0, 0, 60))
     img.alpha_composite(scrim)
     draw = ImageDraw.Draw(img)
