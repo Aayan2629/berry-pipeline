@@ -205,6 +205,30 @@ jobs:
           ls -1t | tail -n +21 | xargs -r rm -rf
           echo "$(ls -1 | wc -l) crawl(s) kept"
 
+      - name: Put the dashboard online (Cloudflare Pages)
+        # The same dashboard.html you open on your Mac, rebuilt AFTER today's
+        # post so it shows what is left, and uploaded with the slide images it
+        # points at. Lives at https://berry-dashboard.pages.dev -- a separate
+        # site from the public job board. It only ever SHOWS things: no button
+        # on it can post.
+        if: ${{ !cancelled() }}
+        continue-on-error: true
+        env:
+          CLOUDFLARE_API_TOKEN:  ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          [ -z "$CLOUDFLARE_API_TOKEN" ] && { echo "no Cloudflare secrets"; exit 0; }
+          cd pipeline_scripts
+          python dashboard.py --quiet
+          D="$RUNNER_TEMP/dash"
+          mkdir -p "$D"
+          cp dashboard.html "$D/index.html"
+          [ -d queue_carousels ] && cp -r queue_carousels "$D/"
+          # keep it out of Google
+          printf '/*\n  X-Robots-Tag: noindex\n' > "$D/_headers"
+          npx --yes wrangler@4 pages project create berry-dashboard --production-branch=main || true
+          npx --yes wrangler@4 pages deploy "$D" --project-name=berry-dashboard --branch=main --commit-dirty=true
+
       - name: Commit the state back
         if: always()
         # The runner is deleted when the job ends, so anything not committed
