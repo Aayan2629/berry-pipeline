@@ -93,7 +93,14 @@ def main():
     # Optional on purpose: no NETLIFY_TOKEN yet means this prints how to set
     # one up and the run carries on. A missing deploy should not stop the
     # carousels from being built.
-    run("6/7  Put the website live", ["deploy_site.py"], optional=True)
+    # The website now goes live through Cloudflare Pages, as its own step in
+    # .github/workflows/berry.yml, so this no longer spends Netlify credits.
+    # Set USE_NETLIFY=1 to deploy to Netlify again (os.environ is like getenv
+    # in C: read a setting from the environment).
+    if os.environ.get("USE_NETLIFY") == "1":
+        run("6/7  Put the website live (Netlify)", ["deploy_site.py"], optional=True)
+    else:
+        print("\n  6/7  website goes live via Cloudflare (GitHub step), not Netlify")
     run("7/7  The carousels", ["build_carousels.py", "--rebuild"])
 
     print(f"\n{'=' * 62}\n  DONE in {(time.time()-started)/60:.1f} minutes"

@@ -128,6 +128,31 @@ jobs:
           cd pipeline_scripts
           python refresh.py
 
+      - name: Put the website live (Cloudflare Pages)
+        # Replaces Netlify. Netlify's free plan charges 15 credits a deploy and
+        # pauses the site at 300, so a daily deploy killed it by day 20.
+        # Cloudflare Pages' free plan allows 500 deploys a month and does not
+        # charge for visitors, so the site can update every single day.
+        #
+        # wrangler is Cloudflare's own command-line tool. npx downloads and runs
+        # it in one go (Node is already on GitHub's runners), so there is
+        # nothing to install or keep in the repo.
+        if: ${{ !cancelled() }}
+        env:
+          CLOUDFLARE_API_TOKEN:  ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          if [ -z "$CLOUDFLARE_API_TOKEN" ] || [ -z "$CLOUDFLARE_ACCOUNT_ID" ]; then
+            echo "No Cloudflare secrets yet -- website not deployed this run."
+            exit 0
+          fi
+          mkdir -p "$RUNNER_TEMP/site"
+          cp pipeline_scripts/berry_internships.html "$RUNNER_TEMP/site/index.html"
+          # Makes the project the first time; after that it just says it exists.
+          npx --yes wrangler@4 pages project create internberry --production-branch=main || true
+          npx --yes wrangler@4 pages deploy "$RUNNER_TEMP/site" \
+            --project-name=internberry --branch=main --commit-dirty=true
+
       - name: Post whatever is due
         # Exits 0 with "nothing due today" on the four non-posting days, so a
         # quiet day is a green tick rather than a red cross you learn to
