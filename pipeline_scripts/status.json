@@ -1,20 +1,15 @@
 {
   "ig_token_obtained": "2026-09-02",
-  "updated_at": "2026-09-22T23:38:35+00:00",
+  "updated_at": "2026-09-23T23:47:42+00:00",
   "last_deploy": {
-    "outcome": "ok",
-    "at": "2026-09-23T06:37:59+00:00",
-    "detail": "sent: 97 internships, updated 22 Sep 2026 | site=82e131ec... sha1=db85ee724d | deploy 6ab373c54540b2c1181ef6ce ready"
+    "outcome": "failure",
+    "at": "2026-09-23T23:56:38+00:00",
+    "detail": "sent: 101 internships, updated 23 Sep 2026 | site=2402c195... sha1=75d6584a2d |   Netlify said no (HTTP 403):\n  {\"error\":\"Account credit usage exceeded - new deploys are blocked until credits are added\"}"
   },
   "last_post": {
-    "outcome": "failure",
-    "at": "2026-09-22T23:46:10+00:00",
+    "outcome": "success",
+    "at": "2026-09-23T23:57:45+00:00",
     "log": [
-      "    slide 1 ok",
-      "    slide 2 ok",
-      "    slide 3 ok",
-      "    slide 4 ok",
-      "    slide 5 ok",
       "    slide 6 ok",
       "    slide 7 ok",
       "    slide 8 ok",
@@ -22,8 +17,13 @@
       "  grouping them into a carousel...",
       "    still processing the carousel... (2s)",
       "  publishing...",
-      "Publishing failed (HTTP 403):",
-      "{\"error\":{\"message\":\"Application request limit reached\",\"type\":\"OAuthException\",\"is_transient\":false,\"code\":4,\"error_subcode\":2207051,\"error_user_title\":\"action is blocked\",\"error_user_msg\":\"We restrict certain activity to protect our community. Tell us if you think we made a mistake.\",\"fbtrace_id\":\"Av-7gxNuyv-URzC3YXRsLh0\"}}"
+      "  Meta said no -- checking whether it went out anyway...",
+      "  It DID go out (post 18131481073673908). Recording it as posted so it is never posted twice.",
+      "  recorded 6 listing(s) as posted",
+      "  moved out of the queue -> posted_carousels/business-commerce-marketing-finance-part1",
+      "  LIVE -- https://www.instagram.com/berry.internships.syd/",
+      "  media id: 18131481073673908",
+      "  next scheduled: Sat 26 Sep -- Engineering"
     ]
   }
 }
