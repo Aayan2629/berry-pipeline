@@ -208,7 +208,7 @@ jobs:
       - name: Put the dashboard online (Cloudflare Pages)
         # The same dashboard.html you open on your Mac, rebuilt AFTER today's
         # post so it shows what is left, and uploaded with the slide images it
-        # points at. Lives at https://berry-dashboard.pages.dev -- a separate
+        # points at. Lives at https://internberry-dashboard.pages.dev -- a separate
         # site from the public job board. It only ever SHOWS things: no button
         # on it can post.
         if: ${{ !cancelled() }}
@@ -226,8 +226,8 @@ jobs:
           [ -d queue_carousels ] && cp -r queue_carousels "$D/"
           # keep it out of Google
           printf '/*\n  X-Robots-Tag: noindex\n' > "$D/_headers"
-          npx --yes wrangler@4 pages project create berry-dashboard --production-branch=main || true
-          npx --yes wrangler@4 pages deploy "$D" --project-name=berry-dashboard --branch=main --commit-dirty=true
+          npx --yes wrangler@4 pages project create internberry-dashboard --production-branch=main || true
+          npx --yes wrangler@4 pages deploy "$D" --project-name=internberry-dashboard --branch=main --commit-dirty=true
 
       - name: Commit the state back
         if: always()
