@@ -7,23 +7,8 @@
     "detail": "sent: 101 internships, updated 23 Sep 2026 | site=2402c195... sha1=75d6584a2d |   Netlify said no (HTTP 403):\n  {\"error\":\"Account credit usage exceeded - new deploys are blocked until credits are added\"}"
   },
   "last_post": {
-    "outcome": "success",
-    "at": "2026-09-23T23:57:45+00:00",
-    "log": [
-      "    slide 6 ok",
-      "    slide 7 ok",
-      "    slide 8 ok",
-      "  waiting for Meta to fetch the slides...",
-      "  grouping them into a carousel...",
-      "    still processing the carousel... (2s)",
-      "  publishing...",
-      "  Meta said no -- checking whether it went out anyway...",
-      "  It DID go out (post 18131481073673908). Recording it as posted so it is never posted twice.",
-      "  recorded 6 listing(s) as posted",
-      "  moved out of the queue -> posted_carousels/business-commerce-marketing-finance-part1",
-      "  LIVE -- https://www.instagram.com/berry.internships.syd/",
-      "  media id: 18131481073673908",
-      "  next scheduled: Sat 26 Sep -- Engineering"
-    ]
+    "outcome": "skipped",
+    "at": "2026-09-24T01:29:47+00:00",
+    "log": []
   }
 }
