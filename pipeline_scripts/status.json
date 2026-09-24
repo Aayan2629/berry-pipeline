@@ -1,14 +1,9 @@
 {
   "ig_token_obtained": "2026-09-02",
-  "updated_at": "2026-09-23T23:47:42+00:00",
-  "last_deploy": {
-    "outcome": "failure",
-    "at": "2026-09-23T23:56:38+00:00",
-    "detail": "sent: 101 internships, updated 23 Sep 2026 | site=2402c195... sha1=75d6584a2d |   Netlify said no (HTTP 403):\n  {\"error\":\"Account credit usage exceeded - new deploys are blocked until credits are added\"}"
-  },
+  "updated_at": "2026-09-24T01:30:23+00:00",
   "last_post": {
     "outcome": "skipped",
-    "at": "2026-09-24T01:29:47+00:00",
+    "at": "2026-09-24T01:30:42+00:00",
     "log": []
   }
 }
