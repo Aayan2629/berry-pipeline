@@ -590,6 +590,66 @@ def history_block(entries, n_roles):
   </section>"""
 
 
+# ===========================================================================
+# The wardrobe: every background photo the slides can be dressed in.
+# ===========================================================================
+BG_DIR = os.path.join(HERE, "background pics")
+BG_FOLDERS = [("", "Everyone (used when a category has no folder of its own)"),
+              ("tech", "Tech & data"), ("finance", "Finance & business"),
+              ("engineering", "Engineering")]
+
+
+def wardrobe_block():
+    """A grid of every photo in background pics/, grouped by category folder,
+    with how recently each one was used (from background_rotation.json)."""
+    from urllib.parse import quote
+    try:
+        with open(os.path.join(HERE, "background_rotation.json")) as f:
+            last_used = json.load(f).get("last_used", {})
+    except (OSError, ValueError):
+        last_used = {}
+    # rank = how recently used: the biggest counter was used most recently
+    order = sorted(last_used, key=last_used.get, reverse=True)
+    rank = {name: i for i, name in enumerate(order)}
+
+    groups, total = [], 0
+    for sub, label in BG_FOLDERS:
+        folder = os.path.join(BG_DIR, sub) if sub else BG_DIR
+        if not os.path.isdir(folder):
+            continue
+        files = sorted(f for f in os.listdir(folder)
+                       if f.lower().endswith((".jpg", ".jpeg", ".png"))
+                       and not f.startswith("_"))
+        if not files:
+            continue
+        total += len(files)
+        tiles = []
+        for f in files:
+            rel = os.path.join("background pics", sub, f) if sub else os.path.join("background pics", f)
+            r = rank.get(rel)
+            tag = ("next up" if r is None else
+                   "used last" if r == 0 else f"used {r + 1} posts ago")
+            cls = "fresh" if r is None else ("recent" if r < 3 else "")
+            tiles.append(
+                f'<figure class="{cls}"><img src="{quote(rel)}" loading="lazy" alt="">'
+                f'<figcaption>{html.escape(tag)}</figcaption></figure>')
+        groups.append(f'<h3>{html.escape(label)} <span>{len(files)}</span></h3>'
+                      f'<div class="wardrobe">{"".join(tiles)}</div>')
+    if not groups:
+        body = ('<p class="empty">No photos yet. Run '
+                '<code>python3 get_category_photos.py</code> on your Mac.</p>')
+    else:
+        body = "".join(groups)
+    return f"""
+  <section class="photos" id="photos">
+    <h2>Background wardrobe <span>{total} photo{"" if total == 1 else "s"}</span></h2>
+    <p class="hint">Every photo the slides can use. "Next up" ones have never
+    been used, so they go first. Delete one from <code>background pics/</code>
+    and it is never used again.</p>
+    {body}
+  </section>"""
+
+
 def build(due, spill, later, notes, total_posts, history=(), n_roles=0,
           logo_rows=(), now=None):
     # now is a parameter so the page can be built for a date other than today
@@ -875,12 +935,87 @@ def build(due, spill, later, notes, total_posts, history=(), n_roles=0,
     .top h1 {{ font-size: 30px; }}
     .post header {{ flex-wrap: wrap; }}
   }}
+  /* ---- background wardrobe ------------------------------------------ */
+  .photos h2 {{ font-size: 22px; margin: 54px 0 4px; }}
+  .photos h2 span, .photos h3 span {{ color: var(--dim); font-weight: 500; font-size: 14px; }}
+  .photos h3 {{ font-size: 15px; margin: 26px 0 10px; }}
+  .photos .hint {{ color: var(--dim); margin: 0 0 8px; font-size: 13.5px; }}
+  .wardrobe {{ display: grid; gap: 10px;
+               grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); }}
+  .wardrobe figure {{ margin: 0; position: relative; border-radius: 12px; overflow: hidden;
+                      aspect-ratio: 1; background: #eee; }}
+  .wardrobe img {{ width: 100%; height: 100%; object-fit: cover; display: block; }}
+  .wardrobe figcaption {{ position: absolute; left: 6px; bottom: 6px; font-size: 11px;
+       padding: 2px 8px; border-radius: 999px; background: rgba(20,18,24,.62); color: #fff;
+       backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); }}
+  .wardrobe .fresh figcaption {{ background: rgba(46,125,70,.85); }}
+  .wardrobe .recent {{ opacity: .55; }}
+
+  /* ===== Floating glass tab bar ===== */
+  .wrap {{ padding-bottom: 150px; }}
+  html {{ scroll-behavior: smooth; }}
+  #today, #queue, #photos, #posted {{ scroll-margin-top: 20px; }}
+  .tabbar{{
+    position:fixed;left:50%;transform:translateX(-50%);
+    bottom:calc(16px + env(safe-area-inset-bottom,0px));
+    width:min(440px, calc(100% - 32px));
+    display:flex;align-items:center;justify-content:space-between;gap:6px;
+    padding:10px;border-radius:32px;z-index:50;
+    background:linear-gradient(180deg, rgba(38,42,46,.80), rgba(24,27,30,.88));
+    border:1px solid rgba(255,255,255,.14);
+    backdrop-filter:blur(26px) saturate(140%);
+    -webkit-backdrop-filter:blur(26px) saturate(140%);
+    box-shadow:0 22px 48px rgba(60,40,10,.35), inset 0 1px 0 rgba(255,255,255,.18);
+  }}
+  .tabbar::before{{
+    content:"";position:absolute;inset:1px 1px auto 1px;height:46%;
+    border-radius:31px 31px 40px 40px;
+    background:linear-gradient(180deg,rgba(255,255,255,.12),transparent);
+    pointer-events:none;
+  }}
+  .tab{{
+    position:relative;display:flex;flex-direction:column;align-items:center;gap:6px;
+    background:transparent;border:0;cursor:pointer;color:rgba(246,236,216,.62);
+    padding:8px 10px;border-radius:26px;transition:all .3s ease;text-decoration:none;
+  }}
+  .tile{{
+    width:46px;height:46px;border-radius:16px;display:grid;place-items:center;color:#f2e7d0;
+    background:linear-gradient(145deg, rgba(255,255,255,.16), rgba(255,255,255,.05));
+    border:1px solid rgba(255,255,255,.18);
+    backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.35), inset 0 -8px 14px rgba(0,0,0,.35),
+               0 8px 18px rgba(0,0,0,.35);
+    transition:all .3s ease;
+  }}
+  .tile svg{{width:23px;height:23px}}
+  .tab .lab{{display:none;font-size:15px;font-weight:600;color:#f6ecd8}}
+  .tab.active{{
+    flex-direction:row;gap:11px;padding:7px 20px 7px 7px;
+    background:linear-gradient(145deg, rgba(227,189,109,.30), rgba(192,134,34,.16));
+    border:1px solid rgba(227,189,109,.55);
+    backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);
+    box-shadow:inset 0 1px 0 rgba(255,235,190,.45), 0 10px 24px rgba(120,80,20,.35);
+  }}
+  .tab.active .lab{{display:block}}
+  .tab.active .tile{{
+    color:#2a1c08;
+    background:linear-gradient(160deg,#e8c476,#c08622);
+    border-color:rgba(255,235,190,.7);
+    box-shadow:inset 0 1px 0 rgba(255,240,200,.8), 0 0 18px rgba(201,150,62,.6);
+  }}
+  .badge{{
+    position:absolute;top:2px;right:4px;min-width:19px;padding:2px 6px;border-radius:999px;
+    background:linear-gradient(135deg,#e8c476,#c08622);color:#241505;
+    font-size:10px;font-weight:800;text-align:center;
+    box-shadow:0 4px 10px rgba(60,40,10,.4);
+  }}
+  .tab.active .badge{{top:0;right:8px}}
 </style>
 </head>
 <body>
 <div class="wrap">
 
-  <div class="top">
+  <div class="top" id="today">
     <p class="date">{today_name} {now.strftime("%d %B %Y")} &middot; {now.strftime("%H:%M")}</p>
     <h1>{headline}</h1>
     <p>{sub}</p>
@@ -892,9 +1027,12 @@ def build(due, spill, later, notes, total_posts, history=(), n_roles=0,
     <li class="{ig_class}">{ig_line}</li>
   </ul>
 
+  <div id="queue"></div>
   {"".join(cards)}
   {rest_block}
   {logo_html}
+  {wardrobe_block()}
+  <div id="posted"></div>
   {history_html}
 
   <footer>
@@ -931,6 +1069,45 @@ function fallback(text, done) {{
   try {{ document.execCommand('copy'); done(); }} catch (e) {{}}
   document.body.removeChild(ta);
 }}
+</script>
+<nav class="tabbar">
+  <a class="tab active" href="#today" data-sec="today" aria-label="Today">
+    <span class="tile"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="5" width="17" height="15.5" rx="3"/><path d="M3.5 10h17M8 3v4M16 3v4"/></svg></span>
+    <span class="lab">Today</span>
+    {f'<span class="badge">{n}</span>' if n else ''}
+  </a>
+  <a class="tab" href="#queue" data-sec="queue" aria-label="Queue">
+    <span class="tile"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 3 8l9 5 9-5-9-5z"/><path d="m3 13 9 5 9-5"/></svg></span>
+    <span class="lab">Queue</span>
+  </a>
+  <a class="tab" href="#photos" data-sec="photos" aria-label="Photos">
+    <span class="tile"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4.5" width="18" height="15" rx="3"/><circle cx="9" cy="10" r="1.8"/><path d="m21 16-5-5-9 8.5"/></svg></span>
+    <span class="lab">Photos</span>
+  </a>
+  <a class="tab" href="#posted" data-sec="posted" aria-label="Posted">
+    <span class="tile"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"/><path d="m8.5 12.2 2.4 2.4 4.8-5"/></svg></span>
+    <span class="lab">Posted</span>
+  </a>
+</nav>
+<script>
+// Glass bar: tap a tab to jump to that part of the page; the lit tab also
+// follows you as you scroll (IntersectionObserver = "tell me when this
+// section comes on screen").
+(function () {{
+  var tabs = document.querySelectorAll('.tab');
+  function light(id) {{
+    tabs.forEach(function (t) {{ t.classList.toggle('active', t.dataset.sec === id); }});
+  }}
+  tabs.forEach(function (t) {{ t.addEventListener('click', function () {{ light(t.dataset.sec); }}); }});
+  if ('IntersectionObserver' in window) {{
+    var io = new IntersectionObserver(function (es) {{
+      es.forEach(function (e) {{ if (e.isIntersecting) light(e.target.id); }});
+    }}, {{ rootMargin: '-45% 0px -50% 0px' }});
+    ['today', 'queue', 'photos', 'posted'].forEach(function (id) {{
+      var el = document.getElementById(id); if (el) io.observe(el);
+    }});
+  }}
+}})();
 </script>
 </body>
 </html>
