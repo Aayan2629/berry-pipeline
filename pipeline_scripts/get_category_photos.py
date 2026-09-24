@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-get_category_photos.py -- 10 fresh photos per category (30 total) from Unsplash,
+get_category_photos.py -- 10 fresh photos per category (30 total) from Pexels,
 each sorted into its own folder so the covers match the category.
 
     python3 get_category_photos.py              10 per category
@@ -28,8 +28,46 @@ thrown away if it is
 import argparse, io, os, sys, time
 from PIL import Image, ImageStat
 
-# reuse the search + download helpers that already work in more_backgrounds.py
-from more_backgrounds import search, _get, OUT
+import requests
+
+HERE = os.path.dirname(os.path.abspath(__file__))
+OUT = os.path.join(HERE, "background pics")
+
+# Pexels (pexels.com) -- free photos, free for commercial use, no credit
+# needed. Its official API needs a free key: pexels.com/api -> "Your API key".
+# Put it in .env as PEXELS_API_KEY=...   (Unsplash's keyless search that the
+# old version used started answering 401 Unauthorized in Sep 2026.)
+
+
+def _key():
+    """Read PEXELS_API_KEY from .env -- like reading a config file line by line in C."""
+    try:
+        for line in open(os.path.join(HERE, ".env")):
+            if line.startswith("PEXELS_API_KEY="):
+                return line.split("=", 1)[1].strip()
+    except OSError:
+        pass
+    sys.exit("No PEXELS_API_KEY in .env.\n"
+             "Get a free key at https://www.pexels.com/api/ and add the line\n"
+             "    PEXELS_API_KEY=your_key\nto pipeline_scripts/.env")
+
+
+def search(query, per):
+    """[(photo_id, download_url), ...] for a search, square-cropped to 1200px."""
+    r = requests.get("https://api.pexels.com/v1/search",
+                     headers={"Authorization": _key()},
+                     params={"query": query, "per_page": per,
+                             "orientation": "square"}, timeout=25)
+    r.raise_for_status()
+    return [(str(p["id"]),
+             p["src"]["original"] + "?auto=compress&cs=tinysrgb&fit=crop&w=1200&h=1200")
+            for p in r.json().get("photos", [])]
+
+
+def _get(url):
+    r = requests.get(url, timeout=40)
+    r.raise_for_status()
+    return r.content
 
 QUERIES = {
     "tech": ["laptop code screen desk", "developer workspace bright",
@@ -80,7 +118,7 @@ def main():
             for pid, url in hits:
                 if have >= args.per_cat:
                     break
-                dest = os.path.join(folder, f"unsplash_{pid}.jpg")
+                dest = os.path.join(folder, f"pexels_{pid}.jpg")
                 if os.path.exists(dest):
                     continue
                 try:
@@ -95,7 +133,7 @@ def main():
                 with open(dest, "wb") as f:
                     f.write(blob)
                 have += 1
-                print(f"  + {cat}/unsplash_{pid}.jpg  {why}   [{have}/{args.per_cat}]")
+                print(f"  + {cat}/pexels_{pid}.jpg  {why}   [{have}/{args.per_cat}]")
                 time.sleep(0.5)          # be polite
     print("\nDone. Look through the folders and delete any you don't like --")
     print("rotation only ever uses what's in there.")
