@@ -1306,7 +1306,7 @@ PROFILE = {
     "name": "Berry Internships",
     "bio": ["we find the internships so you don't have to",
             "Sydney only  \u00b7  uni students only"],
-    "link": "internberry.netlify.app",
+    "link": "internberry.pages.dev",
 }
 
 # The light palette, lifted from your site's own :root light theme, so this

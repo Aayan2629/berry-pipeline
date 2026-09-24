@@ -88,7 +88,7 @@ SECTIONS = [
          ("python3 deploy_site.py --check",
           "what is live vs what is on your disk", True),
          ("python3 deploy_site.py",
-          "push the file live to internberry.netlify.app", True),
+          "push the file live to internberry.pages.dev", True),
          ("python3 deploy_site.py --site-id",
           "print the Netlify site id", False),
      ]),

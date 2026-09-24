@@ -39,6 +39,7 @@ import re
 import sys
 import webbrowser
 from datetime import datetime
+from zoneinfo import ZoneInfo
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(os.path.dirname(HERE))          # the "job account " folder
@@ -2087,7 +2088,10 @@ def build(rows, dropped=None):
     for token, value in {
         "@@IG@@": INSTAGRAM,
         "@@HANDLE@@": "@" + ACCOUNT,
-        "@@UPDATED@@": datetime.now().strftime("%-d %b %Y"),
+        # Sydney time, not the machine's clock: GitHub's servers run on UTC,
+        # which at 7am Sydney is still yesterday -- so the page said
+        # "updated 23 Sep" on the 24th.
+        "@@UPDATED@@": datetime.now(ZoneInfo("Australia/Sydney")).strftime("%-d %b %Y"),
         "@@TOTAL@@": str(len(rows)),
         "@@STATS@@": stats,
         "@@CHIPS@@": chips,
