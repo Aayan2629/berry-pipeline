@@ -161,7 +161,7 @@ TEMPLATE = r"""
   border: 1px solid rgba(255,255,255,.08);
   box-shadow: 0 30px 60px rgba(0,0,0,.25);
 }
-.bmap-canvas { position: relative; min-height: 560px; overflow: hidden; }
+.bmap-canvas { position: relative; height: 620px; overflow: hidden; }
 .bmap-lines { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
 
 /* the hub */
@@ -221,10 +221,18 @@ TEMPLATE = r"""
 .bmap-job .m { display: flex; gap: 6px; align-items: center; font-size: 10px; color: rgba(238,232,220,.5);
                white-space: nowrap; min-width: 0; }
 .bmap-job .m .co { overflow: hidden; text-overflow: ellipsis; min-width: 0; flex: 1; }
-.bmap-job .m em { flex: none; font-style: normal; padding: 0 5px; border-radius: 4px;
-                  background: rgba(255,255,255,.08); color: rgba(238,232,220,.7); }
 .bmap-job .m i { flex: none; width: 18px; height: 3px; border-radius: 2px; background: var(--c); }
 @keyframes bin { from { opacity: 0; transform: translateX(-10px); } to { opacity: 1; transform: none; } }
+.bmap-post {
+  all: unset; box-sizing: border-box; position: absolute; cursor: pointer; width: 190px;
+  padding: 5px 10px; border-radius: 9px; font-size: 12px; font-weight: 700;
+  background: linear-gradient(145deg, rgba(255,255,255,.09), rgba(255,255,255,.03));
+  border: 1px solid rgba(255,255,255,.14); opacity: 0; animation: bin .45s ease forwards;
+}
+.bmap-post small { display: block; font-weight: 500; font-size: 10.5px; color: rgba(238,232,220,.55); }
+.bmap-post i { display: inline-block; width: 8px; height: 8px; border-radius: 50%;
+               background: var(--c); box-shadow: 0 0 8px var(--c); margin-right: 6px; }
+.bmap-post:hover, .bmap-post.on { border-color: var(--gold); }
 .bmap-empty { position: absolute; left: 40px; top: 50%; color: rgba(238,232,220,.5); font-size: 13px; }
 
 /* the panel */
@@ -233,7 +241,7 @@ TEMPLATE = r"""
   background: linear-gradient(180deg, rgba(255,255,255,.07), rgba(255,255,255,.025));
   border: 1px solid rgba(255,255,255,.10);
   backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
-  min-width: 0;
+  min-width: 0; max-height: 620px; overflow-y: auto;
 }
 .bmap-panel .kick { font-size: 11px; letter-spacing: .12em; text-transform: uppercase; color: var(--gold); }
 .bmap-panel h3 { margin: 6px 0 4px; font-size: 20px; line-height: 1.25; }
@@ -259,13 +267,15 @@ TEMPLATE = r"""
 /* phones: stack it -- hub + categories as a row, jobs as a list */
 @media (max-width: 860px) {
   .bmap-space { grid-template-columns: 1fr; }
-  .bmap-canvas { min-height: 0; }
+  .bmap-canvas { height: auto; }
+  .bmap-panel { max-height: none; }
   .bmap-lines, .bmap-hub { display: none; }
   .bmap-cats { position: static; width: auto; flex-direction: row; overflow-x: auto;
                padding-bottom: 6px; }
   .bmap-cat { min-width: 130px; }
   .bmap-fan { position: static; margin-top: 12px; }
-  .bmap-job { position: static; display: block; max-width: none; margin: 2px 0; }
+  .bmap-job { position: static; display: block; width: auto; margin: 2px 0 2px 16px; }
+  .bmap-post { position: static; display: block; width: auto; margin: 12px 0 4px; }
 }
 </style>
 
@@ -315,28 +325,49 @@ TEMPLATE = r"""
     return { x: (side === 'right' ? r.right : r.left) - c.left, y: r.top + r.height / 2 - c.top };
   }
 
-  // ---- the fan: jobs placed on an arc that bulges out in the middle ------
+  // ---- the fan: the category's POSTS (one per date), each with its jobs ---
+  // Rows top to bottom: [post header, its jobs..., next post header, ...],
+  // all placed on an arc that bulges out in the middle.
   function layoutFan(c) {
     fan.innerHTML = '';
-    if (!c.jobs.length) {
+    if (!c.posts.length) {
       fan.innerHTML = '<div class="bmap-empty">Nothing queued for ' + esc(c.short) + ' right now.</div>';
       return;
     }
-    var H = canvas.clientHeight, n = c.jobs.length;
-    var top = 24, bottom = H - 30, span = bottom - top;
-    c.jobs.forEach(function (j, k) {
-      var t = n === 1 ? 0.5 : k / (n - 1);          // 0 at the top, 1 at the bottom
+    var rows = [];
+    c.posts.forEach(function (p) {
+      rows.push({ kind: 'post', p: p });
+      c.jobs.filter(function (j) { return j.part === p.part; })
+            .forEach(function (j) { rows.push({ kind: 'job', j: j, p: p }); });
+    });
+    var H = canvas.clientHeight, n = rows.length;
+    var top = 20, bottom = H - 34, span = bottom - top;
+    var postX = 10;
+    rows.forEach(function (r, k) {
+      var t = n === 1 ? 0.5 : k / (n - 1);
       var y = top + t * span;
-      var bulge = 1 - Math.pow(2 * t - 1, 2);       // 0 at the ends, 1 in the middle
-      var x = 18 + bulge * 60;
+      var bulge = 1 - Math.pow(2 * t - 1, 2);
+      var x = r.kind === 'post' ? 10 + bulge * 45           // posts follow the arc
+                                : postX + 28 + bulge * 12;   // jobs hang under their post
       var b = document.createElement('button');
-      b.className = 'bmap-job'; b.style.setProperty('--c', c.colour);
-      b.style.left = x + 'px'; b.style.top = (y - 16) + 'px';
-      b.style.animationDelay = (k * 30) + 'ms';
-      b.innerHTML = '<span class="t">' + esc(j.title) + '</span>' +
-                    '<span class="m"><em>part ' + j.part + ' &middot; slide ' + j.slide_no + '</em>' +
-                    '<span class="co">' + esc(j.company || '') + '</span><i></i></span>';
-      b.onclick = function () { showJob(c, j, b); };
+      b.style.setProperty('--c', c.colour);
+      b.style.left = x + 'px'; b.style.top = (y - 15) + 'px';
+      b.style.animationDelay = (k * 25) + 'ms';
+      if (r.kind === 'post') {
+        b.className = 'bmap-post';
+        b.innerHTML = '<i></i>' + esc(r.p.when === 'today' ? 'Today' : r.p.when) +
+                      '<small>' + (c.posts.length > 1 ? 'part ' + r.p.part + ' &middot; ' : '') +
+                      r.p.n + ' role' + (r.p.n === 1 ? '' : 's') + '</small>';
+        b.onclick = function () { showPost(c, r.p, b); };
+        postX = x;
+      } else {
+        b.className = 'bmap-job';
+        b.dataset.parent = r.p.part;
+        b.innerHTML = '<span class="t">' + esc(r.j.title) + '</span>' +
+                      '<span class="m"><span class="co">' + esc(r.j.company || 'Company not listed') +
+                      '</span><i></i></span>';
+        b.onclick = function () { showJob(c, r.j, b); };
+      }
       fan.appendChild(b);
     });
   }
@@ -351,16 +382,31 @@ TEMPLATE = r"""
     });
     var from = edge(catsEl.children[current], 'right');
     var colour = DATA.cats[current].colour;
-    Array.prototype.forEach.call(fan.querySelectorAll('.bmap-job'), function (el) {
-      curve(from, edge(el, 'left'), colour, 1.1, false);
+    var posts = {};
+    fan.querySelectorAll('.bmap-post').forEach(function (el, i) {
+      posts[DATA.cats[current].posts[i].part] = el;
+      curve(from, edge(el, 'left'), '#e3bd6d', 1.6, true);    // category -> each date
+    });
+    fan.querySelectorAll('.bmap-job').forEach(function (el) {
+      var p = posts[el.dataset.parent];
+      if (!p) return;
+      var a = edge(p, 'left'); a.x += 14;                      // drop down from the post node
+      var r = p.getBoundingClientRect(), cr = canvas.getBoundingClientRect();
+      a.y = r.bottom - cr.top;
+      var b = edge(el, 'left');
+      var path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+      path.setAttribute('d', 'M' + a.x + ',' + a.y + ' C' + a.x + ',' + b.y + ' ' + a.x + ',' + b.y + ' ' + b.x + ',' + b.y);
+      path.setAttribute('fill', 'none'); path.setAttribute('stroke', colour);
+      path.setAttribute('stroke-width', 1.1); path.setAttribute('opacity', .8);
+      svg.appendChild(path);
     });
   }
 
   // ---- the panel ---------------------------------------------------------
   function showCat(c) {
     var posts = c.posts.map(function (p) {
-      return '<li><img src="' + esc(p.cover) + '" alt=""><div>Part ' + p.part + ' &middot; ' + p.n +
-             ' roles<span>posts ' + esc(p.when) + '</span></div></li>';
+      return '<li><img src="' + esc(p.cover) + '" alt=""><div>' + (p.when === 'today' ? 'Today' : esc(p.when)) +
+             '<span>' + p.n + ' role' + (p.n === 1 ? '' : 's') + '</span></div></li>';
     }).join('');
     panel.innerHTML =
       '<div class="kick">' + esc(c.day) + '</div>' +
@@ -372,14 +418,26 @@ TEMPLATE = r"""
       '</div>' +
       (c.posts.length ? '<ul class="bmap-posts">' + posts + '</ul>' : '');
   }
+  function showPost(c, p, btn) {
+    fan.querySelectorAll('.on').forEach(function (e) { e.classList.remove('on'); });
+    btn.classList.add('on');
+    var jobs = c.jobs.filter(function (j) { return j.part === p.part; }).map(function (j) {
+      return '<li><div>' + esc(j.title) + '<span>' + esc(j.company || 'Company not listed') + '</span></div></li>';
+    }).join('');
+    panel.innerHTML =
+      '<div class="kick">' + esc(c.short) + (c.posts.length > 1 ? ' &middot; part ' + p.part : '') + '</div>' +
+      '<h3>' + (p.when === 'today' ? 'Posts today' : 'Posts ' + esc(p.when)) + '</h3>' +
+      '<p class="sub">' + p.n + ' role' + (p.n === 1 ? '' : 's') + ' in this post</p>' +
+      '<img src="' + esc(p.cover) + '" alt="cover" loading="lazy">' +
+      '<ul class="bmap-posts">' + jobs + '</ul>';
+  }
   function showJob(c, j, btn) {
-    fan.querySelectorAll('.bmap-job').forEach(function (e) { e.classList.remove('on'); });
+    fan.querySelectorAll('.on').forEach(function (e) { e.classList.remove('on'); });
     btn.classList.add('on');
     panel.innerHTML =
-      '<div class="kick">' + esc(c.short) + ' &middot; part ' + j.part + ' &middot; slide ' + j.slide_no + '</div>' +
+      '<div class="kick">' + esc(c.short) + ' &middot; ' + (j.when === 'today' ? 'posts today' : 'posts ' + esc(j.when)) + '</div>' +
       '<h3>' + esc(j.title) + '</h3>' +
       '<p class="sub">' + esc(j.company || 'Company not listed') + '</p>' +
-      '<span class="pill">posts ' + esc(j.when) + '</span>' +
       '<img src="' + esc(j.img) + '" alt="the slide" loading="lazy">' +
       '<a class="go" href="' + esc(j.url) + '" target="_blank" rel="noopener">Open on Seek &#8599;</a>';
   }
