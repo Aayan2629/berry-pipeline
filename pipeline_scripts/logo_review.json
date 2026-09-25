@@ -545,5 +545,10 @@
     "count": 1,
     "saw": "",
     "confirmed": false
+  },
+  "Late Night Chemist Ryde": {
+    "domain": null,
+    "why": "rejected",
+    "rejected": true
   }
 }

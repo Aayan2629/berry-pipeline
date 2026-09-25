@@ -650,74 +650,6 @@ def wardrobe_block():
   </section>"""
 
 
-
-# ===========================================================================
-# SIDE CATEGORIES (testing) -- Architecture & Medicine
-# ===========================================================================
-# Carousels built by side_categories/build_side_carousels.py. They live in
-# side_categories/side_carousels/, which the publisher never looks at, so
-# this section is look-only: no command, nothing here can be posted.
-# Delete this block (and the {side_html} line in build) to remove it.
-SIDE_DIR = os.path.join(HERE, "..", "side_categories", "side_carousels")
-SIDE_COLOURS = {"Architecture": "#545c96", "Medicine & Health": "#2e805c"}
-
-
-def side_block():
-    try:
-        names = sorted(os.listdir(SIDE_DIR))
-    except OSError:
-        return ""
-    cards = []
-    for name in names:
-        folder = os.path.join(SIDE_DIR, name)
-        if not os.path.isdir(folder):
-            continue
-        slides = sorted(f for f in os.listdir(folder)
-                        if f.startswith("slide_") and f.lower().endswith(".jpg"))
-        if not slides:
-            continue
-        try:
-            with open(os.path.join(folder, "meta.json"), encoding="utf-8") as f:
-                meta = json.load(f)
-        except (OSError, ValueError):
-            meta = {}
-        try:
-            with open(os.path.join(folder, "caption.txt"), encoding="utf-8") as f:
-                caption = f.read().strip()
-        except OSError:
-            caption = ""
-        c = {"name": name, "slides": slides}
-        cat = meta.get("category", name)
-        n = count_roles(slides)
-        colour = SIDE_COLOURS.get(cat, FALLBACK)
-        cards.append(f"""
-    <article class="post" style="--c:{colour}">
-      <header>
-        <div class="who">
-          <h2>{html.escape(cat)}</h2>
-          <p>part {meta.get("part", 1)} &middot; {n} role{"" if n == 1 else "s"}
-             &middot; {len(slides)} slides &middot; planned for {html.escape(meta.get("day", "?"))}</p>
-        </div>
-        <span class="flag" style="background:#eee8f6;color:#5b3f8c">Testing &mdash; won&rsquo;t post</span>
-      </header>
-      <div class="strip">{slide_strip(c, base="../side_categories/side_carousels")}</div>
-      <details>
-        <summary>Caption &mdash; {len(caption)} characters</summary>
-        <pre>{html.escape(caption)}</pre>
-      </details>
-    </article>""")
-    if not cards:
-        return ""
-    return f"""
-  <section class="side" id="side">
-    <h3 style="margin:48px 0 6px">New categories &mdash; testing</h3>
-    <p style="color:var(--dim);margin:0 0 18px">Architecture and Medicine, built on the side.
-       These are not in the queue, so nothing here can be posted.
-       Rebuild: <code>python3 side_categories/build_side_carousels.py</code></p>
-    {"".join(cards)}
-  </section>"""
-
-
 def build(due, spill, later, notes, total_posts, history=(), n_roles=0,
           logo_rows=(), now=None):
     # now is a parameter so the page can be built for a date other than today
@@ -733,10 +665,6 @@ def build(due, spill, later, notes, total_posts, history=(), n_roles=0,
 
     history_html = history_block(history, n_roles)
     logo_html = logo_block(logo_rows)
-    try:
-        side_html = side_block()   # testing section, look-only
-    except Exception:
-        side_html = ""
 
     n = len(due)
 
@@ -1102,7 +1030,6 @@ def build(due, spill, later, notes, total_posts, history=(), n_roles=0,
   <div id="queue"></div>
   {"".join(cards)}
   {rest_block}
-  {side_html}
   {logo_html}
   {wardrobe_block()}
   <div id="posted"></div>
@@ -1153,10 +1080,6 @@ function fallback(text, done) {{
     <span class="tile"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 3 8l9 5 9-5-9-5z"/><path d="m3 13 9 5 9-5"/></svg></span>
     <span class="lab">Queue</span>
   </a>
-  <a class="tab" href="#side" data-sec="side" aria-label="New">
-    <span class="tile"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v16M4 12h16"/></svg></span>
-    <span class="lab">New</span>
-  </a>
   <a class="tab" href="#photos" data-sec="photos" aria-label="Photos">
     <span class="tile"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4.5" width="18" height="15" rx="3"/><circle cx="9" cy="10" r="1.8"/><path d="m21 16-5-5-9 8.5"/></svg></span>
     <span class="lab">Photos</span>
@@ -1180,7 +1103,7 @@ function fallback(text, done) {{
     var io = new IntersectionObserver(function (es) {{
       es.forEach(function (e) {{ if (e.isIntersecting) light(e.target.id); }});
     }}, {{ rootMargin: '-45% 0px -50% 0px' }});
-    ['today', 'queue', 'side', 'photos', 'posted'].forEach(function (id) {{
+    ['today', 'queue', 'photos', 'posted'].forEach(function (id) {{
       var el = document.getElementById(id); if (el) io.observe(el);
     }});
   }}
