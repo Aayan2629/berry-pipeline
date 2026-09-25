@@ -667,6 +667,12 @@ def build(due, spill, later, notes, total_posts, history=(), n_roles=0,
 
     history_html = history_block(history, n_roles)
     logo_html = logo_block(logo_rows)
+    # The node-graph "Map" (dashboard_map.py). Look-only; never breaks the page.
+    try:
+        import dashboard_map
+        map_html = dashboard_map.map_block(everything_waiting(), now)
+    except Exception:
+        map_html = ""
 
     n = len(due)
 
@@ -739,10 +745,70 @@ def build(due, spill, later, notes, total_posts, history=(), n_roles=0,
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>berry &mdash; posting dashboard</title>
+<script>
+// Runs before anything is drawn, so a dark-mode choice never flashes white.
+// localStorage only remembers the choice on this browser; if it's blocked
+// (private window) the page just follows the device setting.
+try {{
+  var t = localStorage.getItem("berry-theme");
+  if (t === "light" || t === "dark") document.documentElement.dataset.theme = t;
+}} catch (e) {{}}
+</script>
 <style>
+  /* ---- colours -------------------------------------------------------
+     Every colour on the page comes from these. Light is the default; dark
+     kicks in when you tap the sun/moon button (top right) or, if you have
+     never tapped it, when your phone/Mac is set to dark mode. */
   :root {{
     --ink: #17151a; --dim: #6b6470; --line: #e6e1e8;
     --bg: #faf7fb; --card: #ffffff;
+    --soft: #f6f3f7; --chip: #efeaf1; --ph: #eeeeee;
+    --warn-bd: #f0c2ae; --warn-bg: #fff5f0; --warn-fg: #9a3a12;
+    --good-bd: #c4e2cd; --good-bg: #f3fbf5; --good-fg: #2b6b41;
+    --now-bg: #eef4ff; --now-fg: #2c4f9e;
+    --late-bg: #fdeeea; --late-fg: #a3391a;
+    color-scheme: light;
+  }}
+  /* Written twice on purpose: once for "my device is in dark mode and I've
+     never picked", once for "I tapped dark". Same values both times. */
+  @media (prefers-color-scheme: dark) {{
+    :root:not([data-theme="light"]) {{
+      --ink: #efeaf2; --dim: #a39cab; --line: #34303a;
+      --bg: #141216; --card: #1e1b21;
+      --soft: #252129; --chip: #2c2831; --ph: #2a262e;
+      --warn-bd: #6e3a26; --warn-bg: #2d1b14; --warn-fg: #f3a07c;
+      --good-bd: #2f5a3c; --good-bg: #16261b; --good-fg: #86d3a0;
+      --now-bg: #1b2640; --now-fg: #9fb8f2;
+      --late-bg: #36201a; --late-fg: #f39a7d;
+      color-scheme: dark;
+    }}
+  }}
+  :root[data-theme="dark"] {{
+    --ink: #efeaf2; --dim: #a39cab; --line: #34303a;
+    --bg: #141216; --card: #1e1b21;
+    --soft: #252129; --chip: #2c2831; --ph: #2a262e;
+    --warn-bd: #6e3a26; --warn-bg: #2d1b14; --warn-fg: #f3a07c;
+    --good-bd: #2f5a3c; --good-bg: #16261b; --good-fg: #86d3a0;
+    --now-bg: #1b2640; --now-fg: #9fb8f2;
+    --late-bg: #36201a; --late-fg: #f39a7d;
+    color-scheme: dark;
+  }}
+
+  /* the sun/moon button */
+  .theme {{
+    position: fixed; top: 14px; right: 14px; z-index: 60;
+    width: 44px; height: 44px; border-radius: 50%; cursor: pointer;
+    display: grid; place-items: center;
+    background: var(--card); color: var(--ink); border: 1px solid var(--line);
+    box-shadow: 0 6px 18px rgba(0,0,0,.12);
+  }}
+  .theme svg {{ width: 21px; height: 21px; }}
+  .theme .sun {{ display: none; }}
+  :root[data-theme="dark"] .theme .sun {{ display: block; }}
+  :root[data-theme="dark"] .theme .moon {{ display: none; }}
+  @media (prefers-color-scheme: dark) {{
+    :root:not([data-theme="light"]) .theme .sun {{ display: block; }}
+    :root:not([data-theme="light"]) .theme .moon {{ display: none; }}
   }}
   * {{ box-sizing: border-box; }}
   body {{
@@ -767,8 +833,8 @@ def build(due, spill, later, notes, total_posts, history=(), n_roles=0,
     font-size: 13px; padding: 5px 11px; border-radius: 999px;
     border: 1px solid var(--line); background: var(--card); color: var(--dim);
   }}
-  .notes li.warn {{ border-color: #f0c2ae; background: #fff5f0; color: #9a3a12; }}
-  .notes li.good {{ border-color: #c4e2cd; background: #f3fbf5; color: #2b6b41; }}
+  .notes li.warn {{ border-color: var(--warn-bd); background: var(--warn-bg); color: var(--warn-fg); }}
+  .notes li.good {{ border-color: var(--good-bd); background: var(--good-bg); color: var(--good-fg); }}
 
   /* ---- a post that is due -------------------------------------------- */
   .post {{
@@ -789,8 +855,8 @@ def build(due, spill, later, notes, total_posts, history=(), n_roles=0,
     flex: none; font-size: 12px; font-weight: 600; padding: 5px 10px;
     border-radius: 999px; white-space: nowrap;
   }}
-  .flag.now {{ background: #eef4ff; color: #2c4f9e; }}
-  .flag.late {{ background: #fdeeea; color: #a3391a; }}
+  .flag.now {{ background: var(--now-bg); color: var(--now-fg); }}
+  .flag.late {{ background: var(--late-bg); color: var(--late-fg); }}
 
   /* The slides scroll sideways in their own box -- the page itself must
      never scroll sideways. */
@@ -879,7 +945,7 @@ def build(due, spill, later, notes, total_posts, history=(), n_roles=0,
   .past details summary {{ font-size: 13px; }}
   .strip img {{
     display: block; width: 168px; height: 168px; object-fit: cover;
-    border-radius: 10px; border: 1px solid var(--line); background: #eee;
+    border-radius: 10px; border: 1px solid var(--line); background: var(--ph);
   }}
   .strip figcaption {{
     font-size: 11px; color: var(--dim); text-align: center; margin-top: 5px;
@@ -889,7 +955,7 @@ def build(due, spill, later, notes, total_posts, history=(), n_roles=0,
   summary {{ cursor: pointer; font-size: 13px; color: var(--dim); }}
   details pre {{
     white-space: pre-wrap; word-break: break-word; font-size: 13px;
-    background: #f6f3f7; border: 1px solid var(--line); border-radius: 10px;
+    background: var(--soft); border: 1px solid var(--line); border-radius: 10px;
     padding: 14px; margin: 10px 0 0; max-height: 320px; overflow: auto;
   }}
 
@@ -926,7 +992,7 @@ def build(due, spill, later, notes, total_posts, history=(), n_roles=0,
   }}
   .rest img {{
     width: 52px; height: 52px; object-fit: cover; border-radius: 8px;
-    flex: none; background: #eee;
+    flex: none; background: var(--ph);
   }}
   .rest b {{ display: block; font-size: 13px; }}
   .rest span, .rest em {{ display: block; font-size: 12px; color: var(--dim); }}
@@ -936,7 +1002,7 @@ def build(due, spill, later, notes, total_posts, history=(), n_roles=0,
     margin-top: 54px; padding-top: 20px; border-top: 1px solid var(--line);
     color: var(--dim); font-size: 12.5px;
   }}
-  footer code {{ background: #efeaf1; padding: 2px 6px; border-radius: 5px; }}
+  footer code {{ background: var(--chip); padding: 2px 6px; border-radius: 5px; }}
 
   @media (max-width: 640px) {{
     .top h1 {{ font-size: 30px; }}
@@ -950,7 +1016,7 @@ def build(due, spill, later, notes, total_posts, history=(), n_roles=0,
   .wardrobe {{ display: grid; gap: 10px;
                grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); }}
   .wardrobe figure {{ margin: 0; position: relative; border-radius: 12px; overflow: hidden;
-                      aspect-ratio: 1; background: #eee; }}
+                      aspect-ratio: 1; background: var(--ph); }}
   .wardrobe img {{ width: 100%; height: 100%; object-fit: cover; display: block; }}
   .wardrobe figcaption {{ position: absolute; left: 6px; bottom: 6px; font-size: 11px;
        padding: 2px 8px; border-radius: 999px; background: rgba(20,18,24,.62); color: #fff;
@@ -961,7 +1027,7 @@ def build(due, spill, later, notes, total_posts, history=(), n_roles=0,
   /* ===== Floating glass tab bar ===== */
   .wrap {{ padding-bottom: 150px; }}
   html {{ scroll-behavior: smooth; }}
-  #today, #queue, #photos, #posted {{ scroll-margin-top: 20px; }}
+  #today, #queue, #map, #photos, #posted {{ scroll-margin-top: 20px; }}
   .tabbar{{
     position:fixed;left:50%;transform:translateX(-50%);
     bottom:calc(16px + env(safe-area-inset-bottom,0px));
@@ -1020,6 +1086,23 @@ def build(due, spill, later, notes, total_posts, history=(), n_roles=0,
 </style>
 </head>
 <body>
+<button class="theme" type="button" onclick="flipTheme()"
+        aria-label="Switch light / dark mode" title="Light / dark">
+  <svg class="moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z"/></svg>
+  <svg class="sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.5v2.2M12 19.3v2.2M2.5 12h2.2M19.3 12h2.2M5.3 5.3l1.6 1.6M17.1 17.1l1.6 1.6M5.3 18.7l1.6-1.6M17.1 6.9l1.6-1.6"/></svg>
+</button>
+<script>
+function flipTheme() {{
+  var root = document.documentElement;
+  // What is showing right now: an explicit pick, else the device setting.
+  var dark = root.dataset.theme
+    ? root.dataset.theme === "dark"
+    : window.matchMedia("(prefers-color-scheme: dark)").matches;
+  var next = dark ? "light" : "dark";
+  root.dataset.theme = next;
+  try {{ localStorage.setItem("berry-theme", next); }} catch (e) {{}}
+}}
+</script>
 <div class="wrap">
 
   <div class="top" id="today">
@@ -1036,6 +1119,7 @@ def build(due, spill, later, notes, total_posts, history=(), n_roles=0,
 
   <div id="queue"></div>
   {"".join(cards)}
+  {map_html}
   {rest_block}
   {logo_html}
   {wardrobe_block()}
@@ -1087,6 +1171,10 @@ function fallback(text, done) {{
     <span class="tile"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 3 8l9 5 9-5-9-5z"/><path d="m3 13 9 5 9-5"/></svg></span>
     <span class="lab">Queue</span>
   </a>
+  <a class="tab" href="#map" data-sec="map" aria-label="Map">
+    <span class="tile"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="5" cy="12" r="2.4"/><circle cx="19" cy="5" r="2"/><circle cx="19" cy="12" r="2"/><circle cx="19" cy="19" r="2"/><path d="M7.4 12h9.6M7 10.8C11 6 14 5 17 5M7 13.2C11 18 14 19 17 19"/></svg></span>
+    <span class="lab">Map</span>
+  </a>
   <a class="tab" href="#photos" data-sec="photos" aria-label="Photos">
     <span class="tile"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4.5" width="18" height="15" rx="3"/><circle cx="9" cy="10" r="1.8"/><path d="m21 16-5-5-9 8.5"/></svg></span>
     <span class="lab">Photos</span>
@@ -1110,7 +1198,7 @@ function fallback(text, done) {{
     var io = new IntersectionObserver(function (es) {{
       es.forEach(function (e) {{ if (e.isIntersecting) light(e.target.id); }});
     }}, {{ rootMargin: '-45% 0px -50% 0px' }});
-    ['today', 'queue', 'photos', 'posted'].forEach(function (id) {{
+    ['today', 'queue', 'map', 'photos', 'posted'].forEach(function (id) {{
       var el = document.getElementById(id); if (el) io.observe(el);
     }});
   }}
