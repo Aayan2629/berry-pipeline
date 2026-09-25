@@ -1,0 +1,15 @@
+{
+ "assigned": {
+  "architecture-part1@2026-W39": "background pics/engineering/pexels_37090943.jpg",
+  "architecture-part2@2026-W39": "background pics/tech/pexels_7793740.jpg",
+  "medicine-health-part1@2026-W39": "background pics/finance/pexels_17382268.jpg",
+  "medicine-health-part2@2026-W39": "background pics/desk_workspace_04.jpg"
+ },
+ "last_used": {
+  "background pics/engineering/pexels_37090943.jpg": 1,
+  "background pics/tech/pexels_7793740.jpg": 2,
+  "background pics/finance/pexels_17382268.jpg": 3,
+  "background pics/desk_workspace_04.jpg": 4
+ },
+ "counter": 4
+}
