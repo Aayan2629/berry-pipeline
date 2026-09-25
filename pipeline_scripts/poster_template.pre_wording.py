@@ -1240,35 +1240,6 @@ def pick_cover_style(seed, _week=None, _avoid=True):
     return pick
 
 
-def _kind(count, n_grad):
-    """What to call the roles in a post, so no cover says "internships" when
-    they're all grad roles (Architecture) or a mix (Engineering).
-    Returns (plural-aware word, short form for a search/chat line)."""
-    one = count == 1
-    if n_grad and n_grad >= count:
-        return ("grad role" if one else "grad roles"), "grad roles"
-    if n_grad:
-        return ("role" if one else "roles"), "roles"
-    return ("internship" if one else "internships"), "internships"
-
-
-def _fit(d, text, name, size, max_w, min_size=20):
-    """The biggest font (from size downwards) at which text fits in max_w px."""
-    f = _font(name, size)
-    while d.textlength(text, font=f) > max_w and size > min_size:
-        size -= 2
-        f = _font(name, size)
-    return f
-
-
-def _arrow(d, x, y, length, colour, width=5):
-    """A drawn arrow. (The arrow character is missing from the slide font,
-    which is why it used to come out as an empty box.)"""
-    d.line([x, y, x + length, y], fill=colour, width=width)
-    d.line([x + length - 12, y - 10, x + length, y, x + length - 12, y + 10],
-           fill=colour, width=width, joint="curve")
-
-
 def _layer():
     """A blank see-through sheet the size of the slide, to draw on."""
     return Image.new("RGBA", (W, H), (0, 0, 0, 0))
@@ -1281,7 +1252,7 @@ def _drop_shadow(img, box, radius, blur=18, alpha=110):
     img.alpha_composite(sh.filter(ImageFilter.GaussianBlur(blur)))
 
 
-def _style_lockscreen(img, short, count, ink, kind, **_):
+def _style_lockscreen(img, short, count, ink, **_):
     x0, y0, x1, y1 = 90, 860, W - 90, 1010
     _drop_shadow(img, (x0, y0, x1, y1), 34)
     card = _layer()
@@ -1295,15 +1266,14 @@ def _style_lockscreen(img, short, count, ink, kind, **_):
     d.text((x0 + 120, y0 + 26), "BERRY", font=f_app, fill=(120, 120, 128))
     d.text((x1 - 30 - d.textlength("now", font=f_app), y0 + 26), "now", font=f_app,
            fill=(120, 120, 128))
-    line = f"{count} new {short} {kind}"
-    f_t = _fit(d, line, "DejaVuSans-Bold.ttf", 32, x1 - x0 - 150)
-    d.text((x0 + 120, y0 + 58), line, font=f_t, fill=(28, 28, 30))
+    role = "role" if count == 1 else "roles"
+    d.text((x0 + 120, y0 + 58), f"{count} new {short} {role}", font=f_t, fill=(28, 28, 30))
     d.text((x0 + 120, y0 + 100), "Sydney · swipe to see them all", font=f_s,
            fill=(90, 90, 98))
     img.alpha_composite(card)
 
 
-def _style_search(img, short, count, ink, kind_q, **_):
+def _style_search(img, short, count, ink, **_):
     x0, y0, x1, y1 = 110, 880, W - 110, 970
     _drop_shadow(img, (x0, y0, x1, y1), 45)
     d = ImageDraw.Draw(img)
@@ -1312,7 +1282,7 @@ def _style_search(img, short, count, ink, kind_q, **_):
     d.ellipse([cx - 16, cy - 16, cx + 12, cy + 12], outline=(110, 110, 118), width=5)
     d.line([cx + 9, cy + 9, cx + 24, cy + 24], fill=(110, 110, 118), width=6)
     f = _font("DejaVuSans.ttf", 34)
-    q = f"{short.lower()} {kind_q} sydney"
+    q = f"{short.lower()} internships sydney"
     while d.textlength(q, font=f) > (x1 - x0 - 150) and f.size > 22:
         f = _font("DejaVuSans.ttf", f.size - 2)
     d.text((x0 + 96, y0 + 24), q, font=f, fill=(32, 33, 36))
@@ -1322,7 +1292,7 @@ def _style_search(img, short, count, ink, kind_q, **_):
     d.text(((W - d.textlength(r, font=f_r)) / 2, y1 + 22), r, font=f_r, fill=(255, 255, 255))
 
 
-def _style_ticket(img, short, count, ink, day, kind, **_):
+def _style_ticket(img, short, count, ink, day, **_):
     x0, y0, x1, y1 = 150, 850, W - 150, 1020
     cut = x1 - 200
     _drop_shadow(img, (x0, y0, x1, y1), 18)
@@ -1337,10 +1307,8 @@ def _style_ticket(img, short, count, ink, day, kind, **_):
     f_a, f_b, f_c = (_font("DejaVuSans-Bold.ttf", 22), _font("DejaVuSans-Bold.ttf", 44),
                      _font("DejaVuSans-Bold.ttf", 24))
     d.text((x0 + 36, y0 + 26), "ADMIT ONE", font=f_a, fill=ink)
-    line = f"{count} {short} {kind}"                 # "3 Architecture grad roles"
-    f_b = _fit(d, line, "DejaVuSans-Bold.ttf", 44, cut - x0 - 60, 26)
-    d.text((x0 + 36, y0 + 58), line, font=f_b, fill=(40, 34, 30))
-    d.text((x0 + 36, y0 + 118), f"SYDNEY · POSTED {day}", font=f_c, fill=(120, 110, 95))
+    d.text((x0 + 36, y0 + 58), f"{count} {short}", font=f_b, fill=(40, 34, 30))
+    d.text((x0 + 36, y0 + 118), f"SYDNEY · {day}", font=f_c, fill=(120, 110, 95))
     bx = cut + 34
     for i in range(22):                                        # barcode
         wdt = 3 if zlib.crc32(f"{short}{i}".encode()) % 3 else 6
@@ -1351,7 +1319,7 @@ def _style_ticket(img, short, count, ink, day, kind, **_):
     img.alpha_composite(t)
 
 
-def _style_sticky(img, short, count, ink, kind, **_):
+def _style_sticky(img, short, count, ink, **_):
     note = Image.new("RGBA", (300, 300), (0, 0, 0, 0))
     d = ImageDraw.Draw(note)
     d.rectangle([10, 10, 290, 290], fill=(255, 226, 94, 255))
@@ -1359,10 +1327,7 @@ def _style_sticky(img, short, count, ink, kind, **_):
     f1, f2 = _font("DejaVuSans-Bold.ttf", 40), _font("DejaVuSans-Bold.ttf", 30)
     d.text((34, 64), "apply", font=f1, fill=(50, 40, 20))
     d.text((34, 110), "this week!", font=f1, fill=(50, 40, 20))
-    line = f"{count} {kind}"
-    f2 = _fit(d, line, "DejaVuSans-Bold.ttf", 30, 170, 20)
-    d.text((34, 190), line, font=f2, fill=ink)
-    _arrow(d, 34 + d.textlength(line, font=f2) + 14, 190 + f2.size * 0.62, 40, ink)
+    d.text((34, 190), f"{count} roles >>", font=f2, fill=ink)
     note = note.rotate(-7, resample=Image.BICUBIC, expand=True)
     sh = Image.new("RGBA", note.size, (0, 0, 0, 0))
     sh.paste((0, 0, 0, 120), mask=note.split()[3])
@@ -1390,7 +1355,7 @@ def _style_polaroid(img, short, account_handle, **_):
     img.alpha_composite(frame)
 
 
-def _style_calendar(img, short, count, ink, day, kind, **_):
+def _style_calendar(img, short, ink, day, **_):
     x0, y0, x1, y1 = W / 2 - 150, 820, W / 2 + 150, 1030
     _drop_shadow(img, (x0, y0, x1, y1), 22)
     d = ImageDraw.Draw(img)
@@ -1402,12 +1367,12 @@ def _style_calendar(img, short, count, ink, day, kind, **_):
     f_d, f_b, f_s = (_font("DejaVuSans-Bold.ttf", 30), _font("DejaVuSans-Bold.ttf", 40),
                      _font("DejaVuSans-Bold.ttf", 26))
     d.text(((W - d.textlength(day, font=f_d)) / 2, y0 + 16), day, font=f_d, fill="white")
-    f_b = _fit(d, short, "DejaVuSans-Bold.ttf", 36, 260, 22)   # "Medicine & health"
-    d.text(((W - d.textlength(short, font=f_b)) / 2, y0 + 94), short, font=f_b,
+    word = short.split(" ")[0].upper()
+    while d.textlength(word, font=f_b) > 260 and f_b.size > 24:
+        f_b = _font("DejaVuSans-Bold.ttf", f_b.size - 2)
+    d.text(((W - d.textlength(word, font=f_b)) / 2, y0 + 92), word, font=f_b,
            fill=(30, 30, 34))
-    n = f"{count} {kind}"
-    f_s = _fit(d, n, "DejaVuSans-Bold.ttf", 26, 260, 18)
-    d.text(((W - d.textlength(n, font=f_s)) / 2, y0 + 148), n, font=f_s,
+    d.text(((W - d.textlength("day", font=f_s)) / 2, y0 + 148), "day", font=f_s,
            fill=(130, 130, 136))
 
 
@@ -1438,11 +1403,11 @@ def _style_checklist(img, short, ink, **_):
         y += 60
 
 
-def _chat_bubbles(draw, yy, short, msg, ink, kind_q="internships"):
+def _chat_bubbles(draw, yy, short, msg, ink):
     """Two chat bubbles instead of the one grey bubble: a question on the
     left, the answer on the right in the category colour."""
     f = _font("DejaVuSans-Bold.ttf", 36)
-    q = f"any {short.lower()} {kind_q}?"
+    q = f"any {short.lower()} internships?"
     tw = draw.textlength(q, font=f)
     x0, h = 150, 78
     draw.rounded_rectangle([x0, yy, x0 + tw + 70, yy + h], radius=h / 2, fill=(233, 233, 235))
@@ -1523,13 +1488,7 @@ def build_cover(category, count, out_dir, account_handle="[your account handle]"
         shd.text(((W - lw) / 2, yy + 6), w, font=f_big, fill=(0, 0, 0, 150))
         yy += line_h
     f_sub = _font("DejaVuSans-Bold.ttf", 50)
-    # not "internships" when they're grad roles (Architecture) or a mix
-    if n_grad and n_grad >= count:
-        sub = "grad roles in Sydney"
-    elif n_grad:
-        sub = "internships & grad roles"
-    else:
-        sub = "internships in Sydney"
+    sub = "internships in Sydney"
     sub_w = draw.textlength(sub, font=f_sub)
     shd.text(((W - sub_w) / 2, yy + 58), sub, font=f_sub, fill=(0, 0, 0, 150))
     img.alpha_composite(shadow.filter(ImageFilter.GaussianBlur(14)))
@@ -1549,26 +1508,23 @@ def build_cover(category, count, out_dir, account_handle="[your account handle]"
 
     # ---- the bubble --------------------------------------------------------
     n_intern = count - n_grad
-    def _s(n, word):                      # 1 grad role / 2 grad roles
-        return f"{n} {word}" + ("" if n == 1 else "s")
     if n_grad and n_intern:
-        msg = f"{_s(n_intern, 'internship')} + {_s(n_grad, 'grad role')}"
+        msg = f"{n_intern} internships + {n_grad} grad roles"
     elif n_grad:
-        msg = f"{_s(n_grad, 'grad role')}, open now"
+        msg = f"{n_grad} grad roles, open now"
     else:
         msg = f"{count} open right now" if count != 1 else "1 open right now"
     # ---- the style (see COVER_STYLES) ---------------------------------------
     # style=None means "pick for me"; pass one by name to force it.
     style = style or pick_cover_style(seed)
-    kind, kind_q = _kind(count, n_grad)
     day = COVER_DAY.get((category or "").strip(), "THIS WEEK")
     if style == "chat":
-        _chat_bubbles(draw, yy + 10, short, msg, ink, kind_q)
+        _chat_bubbles(draw, yy + 10, short, msg, ink)
     else:
         _bubble(draw, W / 2, yy, msg, _font("DejaVuSans-Bold.ttf", 40))
 
     extras = {"short": short, "count": count, "ink": ink, "day": day,
-              "kind": kind, "kind_q": kind_q, "account_handle": account_handle}
+              "account_handle": account_handle}
     if style == "camera":
         _camera_chrome(img, draw)
     elif style == "lockscreen":
