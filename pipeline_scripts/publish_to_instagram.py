@@ -63,15 +63,35 @@ ENV_FILE = os.path.join(HERE, ".env")
 
 API = "https://graph.instagram.com/v21.0"
 
-# One category per posting day. Wednesday, Friday and Sunday are deliberately
-# empty -- four posts a week is a rhythm you can actually keep, and the gaps
-# are where an overflow post lands when a category has more than five new
+# One category per posting day. Architecture (Wednesday) and Medicine &
+# Health (Sunday) joined in Sept 2026; Tuesday and Friday are the rest days,
+# and where an overflow post lands when a category has more than five new
 # listings. Monday is 0.
 SCHEDULE = {
     0: "Technology, Data & AI",
+    2: "Architecture",                 # built by side_categories/build_side_carousels.py
     3: "Business, Commerce, Marketing & Finance",
     5: "Engineering",
+    6: "Medicine & Health",            # built by side_categories/build_side_carousels.py
 }
+
+# A category added to SCHEDULE only counts from its first real posting day.
+# Without this, the day a new category goes live it looks "late" for the
+# weekday that already went by before it existed.
+SCHEDULE_START = {
+    "Medicine & Health": "2026-09-27",   # first Sunday
+    "Architecture": "2026-09-30",        # first Wednesday
+}
+
+
+def category_on(day):
+    """The category scheduled for this date, or None (rest day, or a
+    category that hadn't started yet on that date)."""
+    category = SCHEDULE.get(day.weekday())
+    start = SCHEDULE_START.get(category)
+    if start and day.strftime("%Y-%m-%d") < start:
+        return None
+    return category
 DAY_NAMES = ["Monday", "Tuesday", "Wednesday", "Thursday",
              "Friday", "Saturday", "Sunday"]
 
@@ -223,7 +243,7 @@ def pick_for_today(today=None):
     today = today or now()
     for back in range(OVERFLOW_LOOKBACK_DAYS + 1):
         day = today - timedelta(days=back)
-        category = SCHEDULE.get(day.weekday())
+        category = category_on(day)
         if not category:
             continue
         waiting = carousels_for(category)

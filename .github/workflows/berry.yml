@@ -135,6 +135,16 @@ jobs:
           cd pipeline_scripts
           python refresh.py
 
+      - name: Architecture & Medicine carousels
+        # Scrapes the two newer categories and draws their carousels straight
+        # into queue_carousels/, after the main build (which clears the queue)
+        # and before posting. Architecture posts Wednesday, Medicine Sunday.
+        # If this breaks, Tech / Business / Engineering still post as normal.
+        continue-on-error: true
+        run: |
+          python side_categories/scrape_side.py
+          python side_categories/build_side_carousels.py
+
       - name: Put the website live (Cloudflare Pages)
         # Replaces Netlify. Netlify's free plan charges 15 credits a deploy and
         # pauses the site at 300, so a daily deploy killed it by day 20.
@@ -214,17 +224,6 @@ jobs:
           ls -1t | tail -n +21 | xargs -r rm -rf
           echo "$(ls -1 | wc -l) crawl(s) kept"
 
-      - name: Side categories -- Architecture & Medicine (look only)
-        # Scrape + draw the two side categories so the dashboard's "New" tab
-        # has something to show. Slides go to side_categories/side_carousels/,
-        # never queue_carousels/, so nothing here can be posted. If it breaks,
-        # the rest of the run carries on.
-        if: ${{ !cancelled() }}
-        continue-on-error: true
-        run: |
-          python side_categories/scrape_side.py
-          python side_categories/build_side_carousels.py
-
       - name: Put the dashboard online (Cloudflare Pages)
         # The same dashboard.html you open on your Mac, rebuilt AFTER today's
         # post so it shows what is left, and uploaded with the slide images it
@@ -244,11 +243,6 @@ jobs:
           mkdir -p "$D"
           cp dashboard.html "$D/index.html"
           [ -d queue_carousels ] && cp -r queue_carousels "$D/"
-          # the side carousels, at the same relative path the page uses
-          if [ -d ../side_categories/side_carousels ]; then
-            mkdir -p "$D/side_categories"
-            cp -r ../side_categories/side_carousels "$D/side_categories/"
-          fi
           cp -r "background pics" "$D/"      # for the Photos wardrobe
           # keep it out of Google
           printf '/*\n  X-Robots-Tag: noindex\n' > "$D/_headers"

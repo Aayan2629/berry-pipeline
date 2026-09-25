@@ -207,6 +207,8 @@ POSTING_DAY = {
     "Technology, Data & AI": "Monday",
     "Business, Commerce, Marketing & Finance": "Thursday",
     "Engineering": "Saturday",
+    "Architecture": "Wednesday",           # built by side_categories/
+    "Medicine & Health": "Sunday",         # built by side_categories/
 }
 
 # Reuse the category + internship-vs-graduate logic from all_jobs.py so the

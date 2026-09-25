@@ -44,7 +44,10 @@ import build_carousels as bc                                      # noqa: E402
 from all_jobs import job_track                                    # noqa: E402
 
 RUNS = os.path.join(REPO, "output", "side_spider")
-OUT_ROOT = os.path.join(HERE, "side_carousels")
+# LIVE: these now go into the real queue, same as the main categories, so
+# publish_to_instagram.py posts them on their day (Architecture Wednesday,
+# Medicine Sunday). Before going live they went to side_categories/side_carousels/.
+OUT_ROOT = bc.OUT_ROOT            # pipeline_scripts/queue_carousels
 
 # category -> (results file, posting day, slide colours (main, deep), short name)
 # Colours are picked to sit at the same muted darkness as the existing three
@@ -98,6 +101,25 @@ def clear_old_slides(folder):
             pass
 
 
+def retire_old(category):
+    if not os.path.isdir(OUT_ROOT):
+        return
+    old_dir = os.path.join(PIPE, "old_carousels")
+    for name in sorted(os.listdir(OUT_ROOT)):
+        meta = os.path.join(OUT_ROOT, name, "meta.json")
+        try:
+            with open(meta, encoding="utf-8") as f:
+                if json.load(f).get("category") != category:
+                    continue
+        except (OSError, ValueError):
+            continue
+        os.makedirs(old_dir, exist_ok=True)
+        dst, n = os.path.join(old_dir, name), 2
+        while os.path.exists(dst):
+            dst, n = os.path.join(old_dir, f"{name}-{n}"), n + 1
+        os.rename(os.path.join(OUT_ROOT, name), dst)
+
+
 def build_category(category, tiles):
     file_name, day, _c, _s = SIDE[category]
     path = newest(file_name)
@@ -116,6 +138,11 @@ def build_category(category, tiles):
     if not jobs:
         print(f"{category}: nothing to build")
         return []
+
+    # Move this category's previous (unposted) carousels out of the queue
+    # first, like build_carousels.py --rebuild does, so a stale part 2 from
+    # an older build can never be posted. Moved to old_carousels/, not deleted.
+    retire_old(category)
 
     chunks = bc.split_evenly(jobs, bc.JOBS_PER_CAROUSEL)
     built = []
@@ -206,7 +233,7 @@ def main():
         print("   If you know the website:  python3 pipeline_scripts/find_logos.py "
               "--set \"Company\" company.com.au   then rebuild.")
     print(f"\nSlides in: {OUT_ROOT}")
-    print("Not in queue_carousels/, so nothing here can be posted.")
+    print("Architecture posts Wednesday, Medicine & Health posts Sunday.")
     print("See them:  python3 pipeline_scripts/dashboard.py")
 
 
