@@ -36,3 +36,9 @@ pipeline_scripts/dashboard.html
 
 # macOS folder metadata
 .DS_Store
+
+# Side categories: slides and scrapes are rebuilt every run, so like
+# queue_carousels they are not committed.
+side_categories/side_carousels/
+side_categories/side_dashboard.html
+output/side_spider/
