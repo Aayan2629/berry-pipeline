@@ -94,6 +94,35 @@ SHORT_CATEGORY = {
 NEUTRAL_DIM = (26, 28, 32)
 TINT_STRENGTH = 0.14
 
+# --------------------------------------------------------------------------
+# Background "looks" -- so the feed is a MIX, not every post the same.
+#
+#   crisp : the photo as it always was (light blur, 0.14 tint above)
+#   soft  : extra blur + a stronger category-colour wash, so the photo sits
+#           back like frosted glass and the text pops off it
+#
+# Every slide in one carousel gets the SAME look (they all share the
+# carousel's name as their seed). Which look a carousel gets flips every
+# week, and the carousels are offset from each other, so any given week
+# roughly half the posts are soft and half are crisp.
+# To turn the mix off, delete one of the two entries.
+BACKGROUND_LOOKS = {
+    "crisp": {"extra_blur": 0, "tint": TINT_STRENGTH},
+    "soft":  {"extra_blur": 4, "tint": 0.26},
+}
+
+
+def pick_background_look(seed, _week=None):
+    """'crisp' or 'soft' for this carousel this week.
+
+    crc32 turns the carousel name into a number (like a hash in C); adding
+    the week number makes the look alternate week to week.
+    """
+    import datetime
+    week = _week if _week is not None else datetime.date.today().isocalendar()[1]
+    names = sorted(BACKGROUND_LOOKS)
+    return names[(zlib.crc32(str(seed).encode()) + week) % len(names)]
+
 
 def palette_for(category):
     """(ink, deep) for a category. Ink is the text and button colour, deep is
@@ -747,6 +776,8 @@ def _background(job_id, deep=NAVY_DEEP, dim=0.20, blur=1.2, category=None):
     """A dimmed photo from backgrounds/ if any exist, else a gradient.
     Same job always gets the same photo so re-runs look identical."""
     pick = _pick_photo(job_id, category)
+    look = BACKGROUND_LOOKS[pick_background_look(job_id)]
+    blur = blur + look["extra_blur"]      # soft look = more blur
     if pick:
         try:
             photo = Image.open(pick).convert("RGB")
@@ -767,7 +798,7 @@ def _background(job_id, deep=NAVY_DEEP, dim=0.20, blur=1.2, category=None):
             photo = photo.filter(ImageFilter.GaussianBlur(blur))
             photo = Image.blend(photo, Image.new("RGB", (W, H), NEUTRAL_DIM), dim)
             return Image.blend(photo, Image.new("RGB", (W, H), deep),
-                               TINT_STRENGTH)
+                               look["tint"])
         except Exception:
             pass
 
@@ -1474,8 +1505,9 @@ def build_cover(category, count, out_dir, account_handle="[your account handle]"
     category = COVER_ALIASES.get((category or "").strip(), category)
     ink, deep = palette_for(category)
     # A cover is all photo, so it gets far less dimming than a job slide and
-    # no blur at all. The type is protected by the scrims below instead,
-    # which darken only the two bands the type sits in.
+    # no blur of its own. The type is protected by the scrims below, which
+    # darken only the two bands the type sits in. (On a "soft" week the
+    # BACKGROUND_LOOKS mix still adds its extra blur + stronger tint.)
     img = _background(seed, deep, dim=0.10, blur=0, category=category).convert("RGBA")
 
     # top and bottom scrims, so the headline and the chrome have something to
