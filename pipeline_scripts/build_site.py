@@ -32,6 +32,7 @@ So the honest order of operations for a weekly refresh is:
 """
 
 import argparse
+import glob
 import html
 import json
 import os
@@ -130,8 +131,84 @@ CATEGORY_COLOURS = {
     "Engineering": "#9a4a2c",
 }
 
+# Fixed order = fixed colour. Sorting the names alphabetically meant adding
+# "Architecture" would push every other category along one slot and repaint
+# the whole site. Index 0..4 lines up with .c-0 .. .c-4 in the CSS.
+CATEGORY_ORDER = [
+    "Business, Commerce, Marketing & Finance",   # c-0 teal
+    "Engineering",                               # c-1 berry pink
+    "Technology, Data & AI",                     # c-2 rust
+    "Architecture",                              # c-3 gold
+    "Medicine & Health",                         # c-4 lavender
+]
+# What the filter chips say on a phone, where the long names don't fit.
+SHORT_LABEL = {
+    "Business, Commerce, Marketing & Finance": "Business",
+    "Technology, Data & AI": "Tech & Data",
+    "Medicine & Health": "Medicine",
+}
+
+# Architecture and Medicine are scraped on the side (side_categories/) into
+# their own files, one per category -- never mixed in with the main crawl.
+SIDE_DIR = os.path.join(os.path.dirname(HERE), "output", "side_spider")
+SIDE_FILES = {"Architecture": "architecture.jsonl",
+              "Medicine & Health": "medicine.jsonl"}
+
+
+def load_side_jobs():
+    """(category, job) pairs from the NEWEST side scrape of each category.
+
+    Newest only: every scrape is a full snapshot, so older folders would only
+    add jobs that have since closed. A missing file is fine -- if the side
+    scrape failed or hasn't run, the site just has the three main categories,
+    exactly as before.
+    """
+    out = []
+    for category, name in SIDE_FILES.items():
+        paths = sorted(glob.glob(os.path.join(SIDE_DIR, "*", name)))
+        if not paths:
+            continue
+        with open(paths[-1], encoding="utf-8") as f:
+            for line in f:
+                if line.strip():
+                    out.append((category, json.loads(line)))
+    return out
+
+
 # A listing this new gets a "New" flag.
 NEW_WITHIN_DAYS = 3
+
+
+def _row(j, title, category, age):
+    """One card's worth of data. Shared by the main crawl and the
+    Architecture / Medicine side scrapes so every card looks the same."""
+    return {
+        "id": str(j.get("job_id") or ""),
+        "title": title,
+        "company": real_company(j.get("company_name") or j.get("business_name")),
+        # The verified list wins over whatever the board sent. If we know
+        # for certain this is Commonwealth Bank, the card shows the real
+        # Commonwealth Bank mark -- not whatever image the advertiser
+        # happened to upload, which is often a campaign banner, a stock
+        # photo or nothing at all. The scraped logo is the fallback, and
+        # a name we cannot identify keeps its initials tile rather than
+        # us guessing a domain.
+        # logo_url is passed IN rather than used as a fallback after
+        # the fact: _logo_for already knows to prefer a verified brand
+        # mark over the advertiser's upload, and to fall back to it when
+        # there is no verified domain. Doing it out here second-guessed
+        # that and skipped the cache.
+        "logo": _brand_logo(real_company(j.get("company_name")
+                                         or j.get("business_name")),
+                            j.get("logo_url") or ""),
+        "location": (j.get("suburb") or j.get("area")
+                     or j.get("region") or "Sydney NSW"),
+        "pay": clean_pay(j.get("pay_range")) or "",
+        "work_type": j.get("work_type") or "",
+        "category": category,
+        "url": j.get("url") or "",
+        "age": age if age is not None else -1,
+    }
 
 
 def collect():
@@ -162,33 +239,25 @@ def collect():
             dropped["closed"] += 1
             continue
 
-        rows.append({
-            "id": str(j.get("job_id") or ""),
-            "title": title,
-            "company": real_company(j.get("company_name") or j.get("business_name")),
-            # The verified list wins over whatever the board sent. If we know
-            # for certain this is Commonwealth Bank, the card shows the real
-            # Commonwealth Bank mark -- not whatever image the advertiser
-            # happened to upload, which is often a campaign banner, a stock
-            # photo or nothing at all. The scraped logo is the fallback, and
-            # a name we cannot identify keeps its initials tile rather than
-            # us guessing a domain.
-            # logo_url is passed IN rather than used as a fallback after
-            # the fact: _logo_for already knows to prefer a verified brand
-            # mark over the advertiser's upload, and to fall back to it when
-            # there is no verified domain. Doing it out here second-guessed
-            # that and skipped the cache.
-            "logo": _brand_logo(real_company(j.get("company_name")
-                                             or j.get("business_name")),
-                                j.get("logo_url") or ""),
-            "location": (j.get("suburb") or j.get("area")
-                         or j.get("region") or "Sydney NSW"),
-            "pay": clean_pay(j.get("pay_range")) or "",
-            "work_type": j.get("work_type") or "",
-            "category": category,
-            "url": j.get("url") or "",
-            "age": age if age is not None else -1,
-        })
+        rows.append(_row(j, title, category, age))
+
+    # ---- Architecture and Medicine & Health ---------------------------------
+    # side_categories/scrape_side.py has already applied their own rules
+    # (side_rules.py): Architecture keeps architecture graduate roles on
+    # purpose because hardly any true internships exist, and Medicine keeps
+    # only clear student roles. So the internship / grad / categorize checks
+    # above are NOT re-run here -- they would undo those decisions. Only the
+    # "still open and recent" checks are.
+    for category, j in load_side_jobs():
+        title = j.get("job_title") or ""
+        age = job_age_days(j.get("posted_date"))
+        if age is not None and age > MAX_AGE_DAYS:
+            dropped["old"] += 1
+            continue
+        if str(j.get("job_id")) in dead:
+            dropped["closed"] += 1
+            continue
+        rows.append(_row(j, title, category, age))
 
     # Newest first; anything with no date sorts to the end rather than the top,
     # since an unknown date is not evidence of freshness.
@@ -229,7 +298,8 @@ def collect():
 TEMPLATE = """<!DOCTYPE html>
 <html lang="en"><head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0d0f12">
 <title>berry &mdash; Sydney internships</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -241,7 +311,7 @@ TEMPLATE = """<!DOCTYPE html>
     --line:#2e2331; --line-soft:#241b27;
     --ink:#f6f0f4; --ink-2:#c9bcc9; --muted:#8f8194;
     --berry:#ff5c8a; --teal:#3fb6bc; --rust:#e08a5e;
-    --ok:#5fd6a0;
+    --ok:#5fd6a0; --gold:#d4a55a; --lav:#a393f5;
     --r:3px;
     /* Glass. The alpha is low enough to read the capsules through and the
        blur high enough that a bright shape drifting behind a card never
@@ -260,7 +330,7 @@ TEMPLATE = """<!DOCTYPE html>
       --line:#e3d9e2; --line-soft:#eee7ed;
       --ink:#1a121c; --ink-2:#4a3d4c; --muted:#7c6f81;
       --berry:#a32a58; --teal:#166b70; --rust:#8c4324;
-      --ok:#15764f;
+      --ok:#15764f; --gold:#d4a55a; --lav:#a393f5;
       --glass:rgba(255,255,255,.55);
       --glass-2:rgba(255,255,255,.72);
       --glass-line:rgba(26,18,28,.10);
@@ -583,7 +653,7 @@ TEMPLATE = """<!DOCTYPE html>
   .initials { width:40px; height:40px; border-radius:7px; flex:none; display:grid;
               place-items:center; background:var(--c); color:var(--bg);
               font:700 14px Archivo,sans-serif; }
-  .card h2 { margin:0; font:600 15.5px/1.32 "Inter Tight",sans-serif;
+  .card h3 { margin:0; font:600 15.5px/1.32 "Inter Tight",sans-serif;
              letter-spacing:-.008em; }
   .co { font-size:13px; color:var(--muted); margin-top:3px; }
   .meta { display:flex; flex-wrap:wrap; gap:6px; }
@@ -818,6 +888,7 @@ TEMPLATE = """<!DOCTYPE html>
                 font-variant-numeric:tabular-nums; }
 
   .c-0{--c:var(--teal);} .c-1{--c:var(--berry);} .c-2{--c:var(--rust);}
+  .c-3{--c:var(--gold);} .c-4{--c:var(--lav);}   /* Architecture, Medicine & Health */
 /* ---------- matte charcoal + contained gold sweep ---------- */
 :root {
   --bg:#0d0f12; --bg-2:#171a1f; --card:#171a1f; --card-2:#20242b;
@@ -855,7 +926,7 @@ body { background:
 /* Pulsating Border treatment: each card's outside light follows its own
    category accent (teal, berry pink, or rust orange). */
 @property --pulse-angle { syntax:"<angle>"; inherits:false; initial-value:0deg; }
-.card.pulse-border { isolation:isolate; border-color:color-mix(in srgb,var(--c) 70%,#fff); }
+.card.pulse-border { isolation:isolate; }
 .card.pulse-border::after {
   content:""; position:absolute; inset:-2px; z-index:2; padding:2px;
   border-radius:calc(var(--r) + 2px); pointer-events:none;
@@ -908,6 +979,184 @@ body { background:
 .hero h1.big { max-width:760px; letter-spacing:-.05em; }
 .hero h1.big .pill { display:none; }
 .hero h1.big .n { color:var(--berry); }
+
+/* =====================================================================
+   PHONE-FRIENDLY PASS  (Apple HIG: layout, typography, buttons, lists)
+   ===================================================================== */
+
+/* --- the spinning border: only on the card you're on, never all 94 --- */
+.card.pulse-border::after { animation:none; opacity:0; transition:opacity .3s var(--ease); }
+@media (hover:hover) {
+  .card.pulse-border:hover::after, .card.pulse-border:focus-within::after {
+    opacity:1; animation:pulse-spectrum 5.8s linear infinite; }
+}
+/* Touch screens have no hover. Without this a tapped card stays "lifted". */
+@media (hover:none) {
+  .card:hover { transform:none; background:var(--glass); }
+  .card:hover::before { transform:scaleY(.28); }
+  .chip:hover, .ig:hover, .apply:hover { transform:none; }
+}
+
+/* --- top bar: turns into frosted glass once you're past the opening ----
+   HIG: controls float above content on a material; content scrolls under.
+   Before, the logo sat on top of job titles with nothing behind it. */
+.bar { transition:background .3s var(--ease); }
+.bar::after { content:""; position:absolute; left:0; right:0; top:100%; height:18px;
+              pointer-events:none; opacity:0; transition:opacity .3s var(--ease);
+              background:linear-gradient(180deg, rgba(0,0,0,.35), transparent); }
+.bar.solid { background:color-mix(in srgb, var(--bg) 72%, transparent);
+             -webkit-backdrop-filter:blur(20px) saturate(180%);
+             backdrop-filter:blur(20px) saturate(180%); }
+.bar.solid::after { opacity:1; }
+.bar .wrap { padding-top:max(18px, env(safe-area-inset-top)); }
+
+/* --- search: magnifier icon like every iOS search field --- */
+.sw .mag { position:absolute; left:13px; top:50%; transform:translateY(-50%);
+           width:17px; height:17px; color:var(--muted); pointer-events:none; z-index:1; }
+.sw input { padding-left:38px; }
+
+/* --- date sections (Notes / Mail style: Today, Yesterday, Previous 7 days) --- */
+.grid { display:block; }
+.list { display:grid; gap:11px; grid-template-columns:repeat(auto-fill,minmax(325px,1fr)); }
+.grp + .grp { margin-top:30px; }
+.grp:first-child { margin-top:10px; }
+.gh { margin:0 0 12px; display:flex; align-items:baseline; gap:10px;
+      font:700 19px/1.2 Archivo,sans-serif; letter-spacing:-.02em; color:var(--ink); }
+.gh span { font:500 13px/1 "Inter Tight",sans-serif; color:var(--muted);
+           font-variant-numeric:tabular-nums; letter-spacing:0; }
+.via, .go { display:none; }        /* phone-only bits, shown below */
+
+/* chip labels: long on desktop, short on a phone */
+.chip .ls { display:none; }
+
+/* =====================================================================
+   iPhone layout  (≤ 720px)
+   ===================================================================== */
+@media (max-width:720px) {
+  /* HIG: 16pt side margins on iPhone, and respect the safe area */
+  .wrap { padding-left:max(16px, env(safe-area-inset-left));
+          padding-right:max(16px, env(safe-area-inset-right)); }
+
+  /* top bar: slimmer, Instagram becomes a 44pt round icon button */
+  .bar .wrap { padding-top:max(10px, env(safe-area-inset-top)); padding-bottom:10px; }
+  .mark { width:30px; height:30px; }
+  .brand { min-height:44px; }
+  .ig { font-size:0; gap:0; width:44px; height:44px; padding:0; justify-content:center; }
+  .ig svg { width:20px; height:20px; }
+
+  /* The background capsules drift behind the list. Quieter on a small screen. */
+  .drops { opacity:.45; }
+
+  /* --- controls --- */
+  .controls { padding:18px 0 6px; }
+  /* 17px text: anything under 16px makes iPhone Safari zoom the page in
+     when you tap the field, which is the jumpy thing people hate. */
+  input[type=search], select { font-size:17px; min-height:44px; border-radius:12px;
+                               padding-top:10px; padding-bottom:10px; }
+  .sw input { padding-right:46px; }
+  /* 44x44 hit area around a small visible circle */
+  .sw .clr { right:0; width:44px; height:44px; font-size:15px; color:var(--ink);
+             background:radial-gradient(circle, var(--line) 0 11px, transparent 11.5px); }
+  .sw .clr:hover { background:radial-gradient(circle, var(--berry) 0 11px, transparent 11.5px); }
+  .chips { margin-left:-16px; margin-right:-16px; padding:2px 16px; gap:8px; }
+  .chip { font-size:15px; padding:0 14px; min-height:40px; }
+  /* the chip stays 40 tall visually but gets a 44pt hit area */
+  .chip { position:relative; }
+  .chip::after { content:""; position:absolute; left:0; right:0; top:-2px; bottom:-2px; }
+  .chip .lf { display:none; }
+  .chip .ls { display:inline; }
+  .summary { padding:14px 2px 10px; }
+  .count { font:500 15px/1.3 "Inter Tight",sans-serif; letter-spacing:0; }
+  .clearall { font-size:15px; min-height:44px; border-bottom:0; }
+
+  /* --- the list: one inset-grouped panel per date section --- */
+  .grid { padding-bottom:48px; }
+  .grp + .grp { margin-top:26px; }
+  .gh { font-size:20px; margin:0 4px 10px; justify-content:space-between; }
+  .gh span { font-size:15px; }
+  .list { display:block; border-radius:16px; overflow:hidden;
+          background:color-mix(in srgb, var(--card) 94%, transparent);
+          -webkit-backdrop-filter:blur(20px) saturate(150%);
+          backdrop-filter:blur(20px) saturate(150%);
+          border:1px solid var(--glass-line); }
+
+  /* A row, not a box. Logo on the leading edge, text stacked, a chevron-ish
+     arrow on the trailing edge. The whole row is the tap target. */
+  .card { display:grid; grid-template-columns:44px minmax(0,1fr) 14px;
+          grid-template-areas:"logo text go" "logo meta go";
+          column-gap:12px; row-gap:0; align-items:start;
+          padding:13px 14px 13px 16px; min-height:72px;
+          background:transparent; border:0; border-radius:0; box-shadow:none;
+          -webkit-backdrop-filter:none; backdrop-filter:none;
+          contain-intrinsic-size:auto 86px;
+          transition:background .25s ease-out; -webkit-tap-highlight-color:transparent; }
+  .card:hover { transform:none; background:transparent; border-color:transparent; }
+  .card:not(.pulse-border):hover, .card:focus-within { box-shadow:none; }
+  /* HIG: always show a press state -- instant on touch-down, fade on release */
+  .card:active { background:color-mix(in srgb, var(--ink) 9%, transparent); transition:none; }
+  .card:focus-within { background:color-mix(in srgb, var(--ink) 6%, transparent); }
+  .card::before { display:none; }                      /* no accent rail */
+
+  /* the pulse layer becomes the row separator, inset to line up with the text */
+  .card.pulse-border::after, .card::after {
+    content:""; position:absolute; left:72px; right:0; bottom:0; top:auto;
+    height:1px; padding:0; border-radius:0; opacity:1;
+    background:var(--line-soft); transform:scaleY(.5); transform-origin:bottom;
+    -webkit-mask:none; mask:none; filter:none; animation:none; }
+  .card:last-child::after { display:none; }
+
+  .top { display:contents; }
+  .top > .logo, .top > .initials { grid-area:logo; }
+  .top > div { grid-area:text; min-width:0; }
+  .logo, .initials { width:44px; height:44px; border-radius:11px; }
+  .initials { font-size:15px; }
+
+  /* type scale straight from iOS: Headline 17 / Subhead 15 / Footnote 13 */
+  .card h3 { font:600 17px/1.28 "Inter Tight",-apple-system,sans-serif; letter-spacing:-.01em;
+             display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical;
+             overflow:hidden; }
+  .card:hover .tlink { text-decoration:none; }
+  .co { font-size:15px; line-height:1.3; color:var(--ink-2); margin-top:2px;
+        white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+
+  /* details collapse into one quiet line: "$60k–70k  Full time · Pymble · Seek" */
+  /* one line, never wraps into a stray leading dot; pay (when listed) sits
+     on its own short line above it */
+  .meta { grid-area:meta; display:block; margin-top:5px; font-size:13px; line-height:1.35;
+          color:var(--muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .meta .tag, .meta .via { font:400 13px/1.35 "Inter Tight",sans-serif; color:var(--muted);
+          background:none; border:0; padding:0; border-radius:0; }
+  .meta .via { display:inline; }
+  .meta > * + *::before { content:"·"; margin:0 6px; color:var(--muted); }
+  .meta .tag.pay { color:var(--ok); font:600 13px/1 "Inter Tight",sans-serif;
+          background:color-mix(in srgb, var(--ok) 14%, transparent);
+          padding:4px 8px; border-radius:6px; display:table; margin:1px 0 6px; }
+  .meta .tag.pay + *::before { content:none; }
+  .meta .new { font-size:10px; padding:3px 6px; margin-left:6px; }
+  .meta .new::before { content:none; }
+
+  .foot { display:none; }                               /* no per-row Apply button */
+  .go { display:block; grid-area:go; align-self:center; width:14px; height:14px;
+        color:var(--muted); opacity:.7; }
+
+  .empty { padding:48px 0 64px; }
+  .empty button { min-height:44px; font-size:16px; }
+  footer { padding:22px 0 max(40px, env(safe-area-inset-bottom)); font-size:15px; }
+}
+
+@media (max-width:720px) {
+  .berry { height:210vh; }
+  .stage.flat .pin { padding:36px 0 8px; }
+  .pcard { padding:24px; }
+}
+@media (prefers-reduced-transparency: reduce) {
+  .bar.solid { background:var(--bg); -webkit-backdrop-filter:none; backdrop-filter:none; }
+  .list { background:var(--card); -webkit-backdrop-filter:none; backdrop-filter:none; }
+}
+@media (prefers-contrast: more) {
+  .list { border-color:var(--muted); }
+  .meta .tag, .meta .via, .co { color:var(--ink-2); }
+}
 </style></head><body>
 
 <!-- Scroll rail. Fixed to the side, the bead tracks how far down the page you
@@ -950,7 +1199,7 @@ body { background:
         <polygon class="m-lead"  points=""></polygon>
       </g>
     </svg><b>berry</b></a>
-  <a class="ig" href="@@IG@@" target="_blank" rel="noopener">
+  <a class="ig" href="@@IG@@" target="_blank" rel="noopener" aria-label="Instagram @@HANDLE@@">
     <svg viewBox="0 0 24 24"><path d="M12 2.2c3.2 0 3.6 0 4.9.07 1.2.05 1.8.25 2.2.42.6.22 1 .48 1.4.9.4.4.7.8.9 1.4.2.4.4 1 .4 2.2.1 1.3.1 1.7.1 4.9s0 3.6-.1 4.9c0 1.2-.2 1.8-.4 2.2-.2.6-.5 1-.9 1.4-.4.4-.8.7-1.4.9-.4.2-1 .4-2.2.4-1.3.1-1.7.1-4.9.1s-3.6 0-4.9-.1c-1.2 0-1.8-.2-2.2-.4-.6-.2-1-.5-1.4-.9-.4-.4-.7-.8-.9-1.4-.2-.4-.4-1-.4-2.2C2.2 15.6 2.2 15.2 2.2 12s0-3.6.1-4.9c0-1.2.2-1.8.4-2.2.2-.6.5-1 .9-1.4.4-.4.8-.7 1.4-.9.4-.2 1-.4 2.2-.4C8.4 2.2 8.8 2.2 12 2.2Zm0 1.8c-3.1 0-3.5 0-4.8.07-1 .05-1.6.22-1.9.36-.5.18-.8.4-1.1.7-.3.3-.5.6-.7 1.1-.1.3-.3.9-.4 1.9C3 9.5 3 9.9 3 13s0 3.5.1 4.8c.1 1 .3 1.6.4 1.9.2.5.4.8.7 1.1.3.3.6.5 1.1.7.3.1.9.3 1.9.4 1.3.06 1.7.07 4.8.07s3.5 0 4.8-.07c1-.1 1.6-.3 1.9-.4.5-.2.8-.4 1.1-.7.3-.3.5-.6.7-1.1.1-.3.3-.9.4-1.9.06-1.3.07-1.7.07-4.8s0-3.5-.07-4.8c-.1-1-.3-1.6-.4-1.9-.2-.5-.4-.8-.7-1.1-.3-.3-.6-.5-1.1-.7-.3-.1-.9-.3-1.9-.36C15.5 4 15.1 4 12 4Zm0 3.1a4.9 4.9 0 1 1 0 9.8 4.9 4.9 0 0 1 0-9.8Zm0 8a3.1 3.1 0 1 0 0-6.2 3.1 3.1 0 0 0 0 6.2Zm6.2-8.2a1.15 1.15 0 1 1-2.3 0 1.15 1.15 0 0 1 2.3 0Z"/></svg>
     @@HANDLE@@
   </a>
@@ -1024,7 +1273,8 @@ body { background:
     <div class="controls">
       <div class="row">
         <div class="sw" id="sw">
-          <input type="search" id="q" placeholder="Search role, company or suburb"
+          <svg class="mag" viewBox="0 0 20 20" aria-hidden="true"><circle cx="8.5" cy="8.5" r="6" fill="none" stroke="currentColor" stroke-width="2"/><path d="M13 13l4.5 4.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+          <input type="search" id="q" placeholder="Search roles, companies, suburbs"
                  aria-label="Search internships" autocomplete="off">
           <button class="clr" id="clrq" type="button" aria-label="Clear search">&times;</button>
           <kbd>/</kbd>
@@ -1042,13 +1292,13 @@ body { background:
             <circle class="tk-ring" cx="8" cy="8" r="7"/>
             <rect class="tk-box" x="1.5" y="1.5" width="13" height="13" rx="6.5"/>
             <path class="tk-mark" d="M4.4 8.3 L6.9 10.8 L11.6 5.4"/>
-          </svg></span>Pay listed<b id="npaid"></b></button>
+          </svg></span><span class="lf">Pay listed</span><span class="ls">Paid</span><b id="npaid"></b></button>
         <button class="chip alt" data-flag="new">
           <span class="tick" aria-hidden="true"><svg viewBox="0 0 16 16">
             <circle class="tk-ring" cx="8" cy="8" r="7"/>
             <rect class="tk-box" x="1.5" y="1.5" width="13" height="13" rx="6.5"/>
             <path class="tk-mark" d="M4.4 8.3 L6.9 10.8 L11.6 5.4"/>
-          </svg></span>New this week<b id="nnew"></b></button>
+          </svg></span><span class="lf">New this week</span><span class="ls">New</span><b id="nnew"></b></button>
       </div>
     </div>
     <div class="summary">
@@ -1121,10 +1371,50 @@ function srcOf(url) {
   } catch (e) { return ""; }
 }
 
+/* ---- tidy text for small screens ---------------------------------------------
+   The same place was written four ways by four job boards ("Sydney, New South
+   Wales, Australia", "Sydney, NSW, AU"...). The whole site is Sydney, so the
+   suburb is the only part that tells you anything. */
+function shortLoc(s) {
+  const first = String(s || "").split(",")[0].trim().replace(/\\s+NSW$/i, "");
+  return first || "Sydney";
+}
+/* "parttime, contract, internship" -> "Part time / Contract". Everything here is
+   an internship, so saying so on every row is noise. */
+function shortType(s) {
+  const map = {fulltime:"Full time", "full time":"Full time", parttime:"Part time",
+    "part time":"Part time", "casual/vacation":"Vacation", casual:"Casual",
+    contract:"Contract", "contract/temp":"Contract", temporary:"Temporary"};
+  const out = [];
+  String(s || "").toLowerCase().split(",").map(x => x.trim()).forEach(x => {
+    const v = map[x];
+    if (v && !out.includes(v)) out.push(v);
+  });
+  return out.slice(0, 2).join(" / ");
+}
+function srcName(url) {
+  try {
+    const h = new URL(url).hostname.replace(/^www\\./, "");
+    return h.includes("seek") ? "Seek" : h.includes("linkedin") ? "LinkedIn"
+         : h.includes("indeed") ? "Indeed" : h.split(".")[0];
+  } catch (e) { return ""; }
+}
+/* Notes/Mail-style date sections. With these, a "New" badge on every row and
+   a "Posted 3 days ago" on every row both become redundant. */
+function bucket(age) {
+  if (age < 0) return "Date not listed";
+  if (age === 0) return "Today";
+  if (age === 1) return "Yesterday";
+  if (age <= 7) return "Previous 7 days";
+  if (age <= 30) return "Previous 30 days";
+  return "Older";
+}
+const GO_ICON = '<svg class="go" viewBox="0 0 14 14" aria-hidden="true"><path d="M4 10L10 4M5 4h5v5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+
 const ageLabel = d => d < 0 ? "" : d === 0 ? "Posted today"
   : d === 1 ? "Posted yesterday" : `Posted ${d} days ago`;
 
-function card(j) {
+function card(j, grouped) {
   const i = CAT_INDEX[j.category] ?? 0;
   const badge = j.logo
     ? `<img class="logo" src="${esc(j.logo)}" alt="" loading="lazy"
@@ -1132,12 +1422,16 @@ function card(j) {
     : `<span class="initials">${esc(initials(j.company))}</span>`;
   const tags = [];
   if (j.pay) tags.push(`<span class="tag pay">${esc(j.pay)}</span>`);
-  if (j.work_type) tags.push(`<span class="tag">${esc(j.work_type)}</span>`);
-  tags.push(`<span class="tag">${esc(j.location)}</span>`);
-  if (j.age >= 0 && j.age <= NEW_WITHIN) tags.push(`<span class="new">New</span>`);
+  const wt = shortType(j.work_type);
+  if (wt) tags.push(`<span class="tag">${esc(wt)}</span>`);
+  tags.push(`<span class="tag" title="${esc(j.location)}">${esc(shortLoc(j.location))}</span>`);
+  const via = srcName(j.url);
+  if (via) tags.push(`<span class="via">${esc(via)}</span>`);   // phone only
+  // Only needed when the list is NOT already split into date sections.
+  if (!grouped && j.age >= 0 && j.age <= NEW_WITHIN) tags.push(`<span class="new">New</span>`);
   return `<article class="card c-${i} pulse-border">
     <div class="top">${badge}<div>
-      <h2><a class="tlink" href="${esc(j.url)}" target="_blank" rel="noopener">${esc(j.title)}</a></h2>
+      <h3><a class="tlink" href="${esc(j.url)}" target="_blank" rel="noopener">${esc(j.title)}</a></h3>
       <div class="co">${esc(j.company || j.category)}</div></div></div>
     <div class="meta">${tags.join("")}</div>
     <div class="foot"><span class="age">${ageLabel(j.age)}${srcOf(j.url)}</span>
@@ -1155,7 +1449,7 @@ function card(j) {
           </svg>
         </span>
       </span>
-    </div></article>`;
+    </div>${GO_ICON}</article>`;
 }
 
 /* ---- the cursor bloom -------------------------------------------------------
@@ -1183,18 +1477,18 @@ if (!reduced) {
    the cards are already in the DOM and visible unless this runs. */
 function stagger() {
   if (reduced || !grid.animate) return;
-  grid.classList.add("reveal");
+
   // Only the cards you can actually see are worth animating. Handing the
   // browser 200+ Web Animations at once costs far more than the effect is
   // worth, and every one of them holds its card invisible until it runs.
-  const cards = [...grid.children].slice(0, 16);
+  const cards = [...grid.querySelectorAll(".card")].slice(0, 16);
   cards.forEach((el, i) => {
     el.animate(
       [{opacity:0, transform:"translateY(14px)"}, {opacity:1, transform:"none"}],
       {duration:420, delay:Math.min(i,14)*32, easing:"cubic-bezier(.22,.8,.28,1)", fill:"both"}
     );
   });
-  setTimeout(()=>grid.classList.remove("reveal"), 900);
+
 }
 
 const flags = {paid: false, new: false};
@@ -1213,7 +1507,20 @@ function render(animate) {
   else if (by === "paid") rows.sort((a,b)=>(b.pay?1:0)-(a.pay?1:0) || a.age-b.age);
   else rows.sort((a,b)=>(a.age<0?1e4:a.age)-(b.age<0?1e4:b.age));
 
-  grid.innerHTML = rows.map(card).join("");
+  // Newest-first gets date sections; the other sorts are one plain list.
+  const grouped = by === "new";
+  const groups = [];
+  if (grouped) {
+    rows.forEach(j => {
+      const name = bucket(j.age);
+      let g = groups[groups.length - 1];
+      if (!g || g.name !== name) groups.push(g = {name, rows: []});
+      g.rows.push(j);
+    });
+  } else if (rows.length) groups.push({name: "", rows});
+  grid.innerHTML = groups.map(g => `<section class="grp">${g.name
+      ? `<h2 class="gh">${g.name}<span>${g.rows.length}</span></h2>` : ""}
+    <div class="list">${g.rows.map(j => card(j, grouped)).join("")}</div></section>`).join("");
   empty.hidden = rows.length > 0;
 
   // The count is a live region, so a screen reader hears the list change
@@ -1335,7 +1642,7 @@ function atmosphere() {
 
   // The capsules are the only atmosphere on the page now, so there are a lot
   // more of them than when they shared the screen with something else.
-  const n = Math.round(gsap.utils.clamp(28, 70, innerWidth / 24));
+  const n = innerWidth <= 720 ? 12 : Math.round(gsap.utils.clamp(28, 70, innerWidth / 24));
   const drops = [];
   for (let i = 0; i < n; i++) {
     const el = document.createElement("span");
@@ -1489,6 +1796,27 @@ addEventListener("keydown", e => {
     q.value = ""; syncControls(); render(true); q.blur();
   }
 });
+
+/* iOS Safari only applies :active (the press state) if something is listening
+   for touches. An empty passive listener is the standard switch-on. */
+document.addEventListener("touchstart", () => {}, {passive: true});
+
+/* The top bar turns to frosted glass once the opening scene is behind you. */
+(function barMaterial() {
+  const bar = document.querySelector(".bar");
+  const open = document.getElementById("berry");
+  if (!bar) return;
+  let ticking = false;
+  const check = () => {
+    ticking = false;
+    const edge = open ? open.offsetTop + open.offsetHeight - 60 : 40;
+    bar.classList.toggle("solid", scrollY > edge);
+  };
+  addEventListener("scroll", () => { if (!ticking) { ticking = true; requestAnimationFrame(check); } },
+                   {passive: true});
+  addEventListener("resize", check);
+  check();
+})();
 
 readUrl();
 syncControls();
@@ -1942,7 +2270,10 @@ berryScene();
 function featured() {
   const stage = document.getElementById("stage");
   if (!stage) return;
-  if (reduced || !window.gsap || !window.ScrollTrigger) {
+  // On a phone the card is just shown -- two screens of scroll-to-build
+  // stood between people and the list.
+  const phone = matchMedia("(max-width:720px)").matches;
+  if (reduced || phone || !window.gsap || !window.ScrollTrigger) {
     stage.classList.add("flat");
     const t = document.getElementById("ptxt");
     if (t) t.remove();
@@ -2065,9 +2396,13 @@ def _initials(name):
 
 
 def build(rows, dropped=None):
-    cats = sorted({r["category"] for r in rows})
+    present = {r["category"] for r in rows}
+    # Known categories in their fixed order, anything unexpected after them.
+    cats = ([c for c in CATEGORY_ORDER if c in present]
+            + sorted(present - set(CATEGORY_ORDER)))
     counts = {c: sum(1 for r in rows if r["category"] == c) for c in cats}
-    index = {c: i for i, c in enumerate(cats)}
+    index = {c: (CATEGORY_ORDER.index(c) if c in CATEGORY_ORDER else i)
+             for i, c in enumerate(cats)}
 
     chips = "".join(
         f'<button class="chip c-{index[c]}" data-cat="{html.escape(c)}">'
@@ -2076,7 +2411,9 @@ def build(rows, dropped=None):
         '<rect class="tk-box" x="1.5" y="1.5" width="13" height="13" rx="6.5"/>'
         '<path class="tk-mark" d="M4.4 8.3 L6.9 10.8 L11.6 5.4"/>'
         '</svg></span>'
-        f'{html.escape(c)}<b>{counts[c]}</b></button>' for c in cats)
+        f'<span class="lf">{html.escape(c)}</span>'
+        f'<span class="ls">{html.escape(SHORT_LABEL.get(c, c))}</span>'
+        f'<b>{counts[c]}</b></button>' for c in cats)
     stats = "".join(
         f'<div class="stat c-{index[c]}"><b>{counts[c]}</b>{html.escape(c)}</div>'
         for c in cats)

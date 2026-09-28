@@ -89,6 +89,15 @@ def main():
         run("4b/7 Which LinkedIn/Indeed/etc have closed?",
             ["check_other_boards_live.py"], optional=True)
 
+    # Architecture and Medicine & Health are scraped into their own files
+    # (side_categories/) BEFORE the website is built, so the site shows all
+    # five categories. Optional: if it breaks, the site is built with the
+    # three main ones exactly as before. (berry.yml scrapes them again later
+    # for the carousels -- a minute of repeat work, and it keeps the
+    # carousel step independent of this one.)
+    run("5a/7 Architecture & Medicine (for the website)",
+        [os.path.join(os.path.dirname(HERE), "side_categories", "scrape_side.py")],
+        optional=True)
     run("5/7  The website", ["build_site.py", "--quiet"])
     # Optional on purpose: no NETLIFY_TOKEN yet means this prints how to set
     # one up and the run carries on. A missing deploy should not stop the

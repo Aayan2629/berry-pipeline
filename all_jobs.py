@@ -386,8 +386,19 @@ def pretty_date(value):
 # fell past the limit, and deleting on that basis would remove open roles.
 # A job with no recorded status is kept -- this file can only remove listings
 # Seek has positively told us are dead.
-LISTING_STATUS_FILE = os.path.join(
-    HERE, "SeekSpider-main", "pipeline_scripts", "listing_status.json")
+#
+# WHERE THE FILE IS. check_live.py writes it to pipeline_scripts/ right beside
+# itself. This used to look for it one folder further out (the old Desktop
+# layout, "job account /SeekSpider-main/..."), which does not exist in the
+# repo -- so the file was never found, nothing was ever treated as closed, and
+# filled roles stayed on the site. Now it checks the real place first and
+# only falls back to the old one.
+_STATUS_CANDIDATES = [
+    os.path.join(HERE, "pipeline_scripts", "listing_status.json"),
+    os.path.join(HERE, "SeekSpider-main", "pipeline_scripts", "listing_status.json"),
+]
+LISTING_STATUS_FILE = next((p for p in _STATUS_CANDIDATES if os.path.exists(p)),
+                           _STATUS_CANDIDATES[0])
 
 
 def load_dead_listings():
