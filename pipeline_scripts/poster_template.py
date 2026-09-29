@@ -149,6 +149,10 @@ BG_BOTTOM = (30, 42, 66)
 # reading as a white slide with a border. 132 gives it room to sit back.
 CARD_MARGIN = 152
 CARD_PAD = 58
+# where every job card's top edge sits (px from the top of the 1080 slide),
+# and how much room to leave under it for the @handle
+CARD_TOP = 120
+CARD_BOTTOM_LIMIT = 90
 # Rounder, to match the reference. At 1080 this is about the radius a phone
 # UI uses, which is why it reads as an interface element rather than a box.
 CARD_RADIUS = 62
@@ -992,7 +996,12 @@ def build_poster(job, out_dir, account_handle="[your account handle]",
 
     card_h = 2 * CARD_PAD + sum(h for _, h in blocks)
     card_x0, card_x1 = CARD_MARGIN, W - CARD_MARGIN
-    card_y0 = max(60, (H - card_h) // 2)
+    # Pin every card to the SAME top edge instead of centring it.
+    # Centring meant a card with an extra row (start date, closing pill, a
+    # 3-line title) sat higher than a short one, so swiping through a carousel
+    # the cards jumped up and down. A fixed top keeps them lined up; only a
+    # card too tall to fit above the handle gets nudged up, just enough.
+    card_y0 = max(60, min(CARD_TOP, H - CARD_BOTTOM_LIMIT - card_h))
     card_y1 = card_y0 + card_h
 
     # soft shadow, then the card itself
