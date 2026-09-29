@@ -151,7 +151,14 @@ def blocked_recently():
 # How far back to look for a category whose leftover parts still need posting.
 # Two days covers "Finance had 12 new roles on Thursday, so parts 2 and 3 go
 # out Friday and Saturday".
-OVERFLOW_LOOKBACK_DAYS = 2
+# 0 = each category posts ONLY on its own day. It used to be 2 ("leftover
+# parts spill onto the next two days"), but refresh.py rebuilds the whole
+# queue every morning -- so right after Sunday's Medicine post, NEXT week's
+# Medicine carousel appeared and counted as "2 days late". That made the
+# account post every day and the dashboard call finished days overdue.
+# Jobs that don't fit this week's post are still on the website, and the
+# freshest ones go into next week's carousel.
+OVERFLOW_LOOKBACK_DAYS = 0
 
 POSTED_JOBS_FILE = os.path.join(
     os.path.dirname(os.path.abspath(__file__)), "posted_jobs.json")
