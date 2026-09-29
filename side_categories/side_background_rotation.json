@@ -3,13 +3,21 @@
   "architecture-part1@2026-W39": "background pics/engineering/pexels_37090943.jpg",
   "architecture-part2@2026-W39": "background pics/tech/pexels_7793740.jpg",
   "medicine-health-part1@2026-W39": "background pics/finance/pexels_17382268.jpg",
-  "medicine-health-part2@2026-W39": "background pics/desk_workspace_04.jpg"
+  "medicine-health-part2@2026-W39": "background pics/desk_workspace_04.jpg",
+  "medicine-health@2026-W39": "background pics/desk_laptop_02.jpg",
+  "architecture-part1@2026-W40": "background pics/tech/pexels_29283981.jpg",
+  "architecture-part2@2026-W40": "background pics/finance/pexels_13045981.jpg",
+  "medicine-health@2026-W40": "background pics/library_06.jpg"
  },
  "last_used": {
   "background pics/engineering/pexels_37090943.jpg": 1,
   "background pics/tech/pexels_7793740.jpg": 2,
   "background pics/finance/pexels_17382268.jpg": 3,
-  "background pics/desk_workspace_04.jpg": 4
+  "background pics/desk_workspace_04.jpg": 4,
+  "background pics/desk_laptop_02.jpg": 5,
+  "background pics/tech/pexels_29283981.jpg": 6,
+  "background pics/finance/pexels_13045981.jpg": 7,
+  "background pics/library_06.jpg": 8
  },
- "counter": 4
+ "counter": 8
 }
