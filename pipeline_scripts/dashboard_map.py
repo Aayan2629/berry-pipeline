@@ -84,7 +84,7 @@ def _next_date(category, today, part_index):
     for back in range(pub.OVERFLOW_LOOKBACK_DAYS, -1, -1):
         d0 = today - timedelta(days=back)
         if pub.category_on(d0) == category:
-            return max(d0 + timedelta(days=part_index), today)
+            return max(d0 + timedelta(days=7 * part_index), today)
     d = today
     start = getattr(pub, "SCHEDULE_START", {}).get(category)
     for _ in range(14):
@@ -92,7 +92,8 @@ def _next_date(category, today, part_index):
         if d.weekday() == day and ok_start:
             break
         d += timedelta(days=1)
-    return d + timedelta(days=part_index)
+    # One post per category per week now (no overflow), so part 2 is next week.
+    return d + timedelta(days=7 * part_index)
 
 
 def map_data(queue, now=None):
@@ -156,12 +157,11 @@ TEMPLATE = r"""
 .bmap-space {
   --gold: #e3bd6d;
   display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 14px;
-  padding: 14px; border-radius: 22px; color: #eee8dc;
-  background: radial-gradient(1200px 500px at 10% 50%, #1d2a2c 0%, #0d1214 55%, #080b0c 100%);
-  border: 1px solid rgba(255,255,255,.08);
-  box-shadow: 0 30px 60px rgba(0,0,0,.25);
+  /* No box of its own any more: it sits straight on the page, in the page's
+     colours (light or dark), so it reads as part of the dashboard. */
+  padding: 0; color: var(--ink); background: none; border: 0; box-shadow: none;
 }
-.bmap-canvas { position: relative; height: 620px; overflow: hidden; }
+.bmap-canvas { position: relative; height: 620px; overflow: visible; }
 .bmap-lines { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
 
 /* the hub */
@@ -170,7 +170,7 @@ TEMPLATE = r"""
   width: 170px; height: 170px; border-radius: 50%;
   display: flex; flex-direction: column; align-items: center; justify-content: center;
   background: radial-gradient(circle, rgba(255,255,255,.05), rgba(255,255,255,0) 70%);
-  border: 1px solid rgba(255,255,255,.07); text-align: center;
+  border: 1px solid var(--line); text-align: center;
 }
 .bmap-hub .orbit {
   position: absolute; inset: 26px; border-radius: 50%;
@@ -182,7 +182,7 @@ TEMPLATE = r"""
   box-shadow: 0 0 30px rgba(160,120,255,.65), 0 0 70px rgba(160,120,255,.25);
 }
 .bmap-hub b { font-size: 17px; letter-spacing: .02em; }
-.bmap-hub small { font-size: 11.5px; color: rgba(238,232,220,.6); }
+.bmap-hub small { font-size: 11.5px; color: var(--dim); }
 @keyframes bspin { to { transform: rotate(360deg); } }
 
 /* the categories */
@@ -193,16 +193,16 @@ TEMPLATE = r"""
 .bmap-cat {
   all: unset; box-sizing: border-box; cursor: pointer; width: 100%;
   padding: 10px 12px; border-radius: 12px;
-  background: linear-gradient(145deg, rgba(255,255,255,.07), rgba(255,255,255,.02));
-  border: 1px solid rgba(255,255,255,.10);
+  background: var(--card);
+  border: 1px solid var(--line);
   transition: all .25s ease;
 }
-.bmap-cat:hover { border-color: rgba(255,255,255,.25); }
+.bmap-cat:hover { border-color: var(--dim); }
 .bmap-cat .n { font-size: 22px; font-weight: 700; display: flex; align-items: center; gap: 8px; }
 .bmap-cat .n i { width: 9px; height: 9px; border-radius: 50%; background: var(--c);
                  box-shadow: 0 0 10px var(--c); }
-.bmap-cat .l { font-size: 12px; color: rgba(238,232,220,.75); }
-.bmap-cat .d { white-space: nowrap; font-size: 10.5px; color: rgba(238,232,220,.45); margin-top: 2px; }
+.bmap-cat .l { font-size: 12px; color: var(--dim); }
+.bmap-cat .d { white-space: nowrap; font-size: 10.5px; color: var(--dim); margin-top: 2px; }
 .bmap-cat.on {
   border-color: var(--gold);
   box-shadow: 0 0 0 1px rgba(227,189,109,.35), 0 0 26px rgba(227,189,109,.22);
@@ -216,9 +216,9 @@ TEMPLATE = r"""
   width: 210px; padding: 3px 8px 4px; border-radius: 8px;
   transition: background .2s ease; opacity: 0; animation: bin .45s ease forwards;
 }
-.bmap-job:hover, .bmap-job.on { background: rgba(255,255,255,.07); }
+.bmap-job:hover, .bmap-job.on { background: var(--soft, rgba(127,127,127,.12)); }
 .bmap-job .t { display: block; font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.bmap-job .m { display: flex; gap: 6px; align-items: center; font-size: 10px; color: rgba(238,232,220,.5);
+.bmap-job .m { display: flex; gap: 6px; align-items: center; font-size: 10px; color: var(--dim);
                white-space: nowrap; min-width: 0; }
 .bmap-job .m .co { overflow: hidden; text-overflow: ellipsis; min-width: 0; flex: 1; }
 .bmap-job .m i { flex: none; width: 18px; height: 3px; border-radius: 2px; background: var(--c); }
@@ -226,43 +226,41 @@ TEMPLATE = r"""
 .bmap-post {
   all: unset; box-sizing: border-box; position: absolute; cursor: pointer; width: 190px;
   padding: 5px 10px; border-radius: 9px; font-size: 12px; font-weight: 700;
-  background: linear-gradient(145deg, rgba(255,255,255,.09), rgba(255,255,255,.03));
-  border: 1px solid rgba(255,255,255,.14); opacity: 0; animation: bin .45s ease forwards;
+  background: var(--card);
+  border: 1px solid var(--line); opacity: 0; animation: bin .45s ease forwards;
 }
-.bmap-post small { display: block; font-weight: 500; font-size: 10.5px; color: rgba(238,232,220,.55); }
+.bmap-post small { display: block; font-weight: 500; font-size: 10.5px; color: var(--dim); }
 .bmap-post i { display: inline-block; width: 8px; height: 8px; border-radius: 50%;
                background: var(--c); box-shadow: 0 0 8px var(--c); margin-right: 6px; }
 .bmap-post:hover, .bmap-post.on { border-color: var(--gold); }
-.bmap-empty { position: absolute; left: 40px; top: 50%; color: rgba(238,232,220,.5); font-size: 13px; }
+.bmap-empty { position: absolute; left: 40px; top: 50%; color: var(--dim); font-size: 13px; }
 
 /* the panel */
 .bmap-panel {
   border-radius: 18px; padding: 18px;
-  background: linear-gradient(180deg, rgba(255,255,255,.07), rgba(255,255,255,.025));
-  border: 1px solid rgba(255,255,255,.10);
-  backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
-  min-width: 0; max-height: 620px; overflow-y: auto;
+  background: var(--card); border: 1px solid var(--line);
+  min-width: 0; align-self: start; position: sticky; top: 20px;
 }
 .bmap-panel .kick { font-size: 11px; letter-spacing: .12em; text-transform: uppercase; color: var(--gold); }
 .bmap-panel h3 { margin: 6px 0 4px; font-size: 20px; line-height: 1.25; }
-.bmap-panel .sub { font-size: 13px; color: rgba(238,232,220,.6); margin: 0 0 14px; }
+.bmap-panel .sub { font-size: 13px; color: var(--dim); margin: 0 0 14px; }
 .bmap-panel .pill { display: inline-block; font-size: 11px; padding: 2px 9px; border-radius: 999px;
                     border: 1px solid rgba(58,168,119,.6); color: #8fe0b7; background: rgba(58,168,119,.12); }
 .bmap-panel img { display: block; width: 100%; border-radius: 12px; margin: 12px 0;
                   border: 1px solid rgba(255,255,255,.12); background: #111; }
 .bmap-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 12px 0; }
-.bmap-stats div { padding: 12px; border-radius: 12px; background: rgba(255,255,255,.04);
-                  border: 1px solid rgba(255,255,255,.08); }
+.bmap-stats div { padding: 12px; border-radius: 12px; background: var(--soft, rgba(127,127,127,.08));
+                  border: 1px solid var(--line); }
 .bmap-stats b { display: block; font-size: 24px; }
-.bmap-stats span { font-size: 11.5px; color: rgba(238,232,220,.55); }
+.bmap-stats span { font-size: 11.5px; color: var(--dim); }
 .bmap-panel a.go { display: inline-flex; gap: 6px; align-items: center; font-size: 13px;
                    color: #111; background: var(--gold); padding: 8px 14px; border-radius: 999px;
                    text-decoration: none; font-weight: 600; }
 .bmap-posts { list-style: none; margin: 8px 0 0; padding: 0; }
 .bmap-posts li { display: flex; gap: 10px; align-items: center; padding: 8px 0;
-                 border-top: 1px solid rgba(255,255,255,.07); font-size: 12.5px; }
+                 border-top: 1px solid var(--line); font-size: 12.5px; }
 .bmap-posts img { width: 44px; height: 44px; margin: 0; border-radius: 8px; flex: none; }
-.bmap-posts span { color: rgba(238,232,220,.55); display: block; font-size: 11.5px; }
+.bmap-posts span { color: var(--dim); display: block; font-size: 11.5px; }
 
 /* phones: stack it -- hub + categories as a row, jobs as a list */
 @media (max-width: 860px) {
@@ -340,7 +338,9 @@ TEMPLATE = r"""
       c.jobs.filter(function (j) { return j.part === p.part; })
             .forEach(function (j) { rows.push({ kind: 'job', j: j, p: p }); });
     });
-    var H = canvas.clientHeight, n = rows.length;
+    var n = rows.length;
+    canvas.style.height = Math.max(560, n * 58 + 70) + 'px';   // room for every row
+    var H = canvas.clientHeight;
     var top = 20, bottom = H - 34, span = bottom - top;
     var postX = 10;
     rows.forEach(function (r, k) {
@@ -378,7 +378,7 @@ TEMPLATE = r"""
     var h = edge(hub, 'right');
     Array.prototype.forEach.call(catsEl.children, function (el, i) {
       var on = i === current;
-      curve(h, edge(el, 'left'), on ? '#e3bd6d' : 'rgba(238,232,220,.22)', on ? 2 : 1.2, on);
+      curve(h, edge(el, 'left'), on ? '#e3bd6d' : 'rgba(127,127,127,.35)', on ? 2 : 1.2, on);
     });
     var from = edge(catsEl.children[current], 'right');
     var colour = DATA.cats[current].colour;
