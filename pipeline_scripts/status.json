@@ -1,24 +1,24 @@
 {
   "ig_token_obtained": "2026-09-02",
-  "updated_at": "2026-09-30T00:34:29+00:00",
+  "updated_at": "2026-10-01T00:37:16+00:00",
   "last_post": {
     "outcome": "success",
-    "at": "2026-09-30T00:46:27+00:00",
+    "at": "2026-10-01T00:49:27+00:00",
     "log": [
-      "    slide 3 ok",
       "    slide 4 ok",
       "    slide 5 ok",
       "    slide 6 ok",
       "    slide 7 ok",
+      "    slide 8 ok",
       "  waiting for Meta to fetch the slides...",
       "  grouping them into a carousel...",
       "    still processing the carousel... (2s)",
       "  publishing...",
-      "  recorded 5 listing(s) as posted",
-      "  moved out of the queue -> posted_carousels/architecture-part1",
+      "  recorded 6 listing(s) as posted",
+      "  moved out of the queue -> posted_carousels/business-commerce-marketing-finance-part1",
       "  LIVE -- https://www.instagram.com/berry.internships.syd/",
-      "  media id: 18090604292212651",
-      "  next scheduled: Thu 01 Oct -- Business, Commerce, Marketing & Finance"
+      "  media id: 18493508602107119",
+      "  next scheduled: Sat 03 Oct -- Engineering"
     ]
   }
 }
