@@ -3,6 +3,7 @@
 side_categories/build_side_carousels.py -- real carousels for the side categories.
 
     python3 side_categories/build_side_carousels.py
+    python3 side_categories/build_side_carousels.py --only law
 
 Takes the newest architecture.jsonl and medicine.jsonl that scrape_side.py
 wrote, and draws them with the SAME slide design as the main pipeline:
@@ -57,6 +58,12 @@ SIDE = {
                      ((84, 92, 150), (28, 30, 56)), "Architecture"),
     "Medicine & Health": ("medicine.jsonl", "Sunday",
                           ((46, 128, 92), (16, 46, 34)), "Medicine & health"),
+    # Law (Oct 2026): muted gold/bronze, same darkness as the others.
+    # No posting day yet -- it is NOT in publish_to_instagram.py's SCHEDULE,
+    # so it only ever goes out when you post it by name:
+    #     python3 publish_to_instagram.py law
+    "Law": ("law.jsonl", "Unscheduled",
+            ((150, 112, 44), (52, 38, 16)), "Law"),
 }
 
 HASHTAGS = {
@@ -64,7 +71,31 @@ HASHTAGS = {
                     "#archigrad #studentjobs #unsw #usyd #uts",
     "Medicine & Health": "#sydneyinternships #medicalstudent #pharmacystudent "
                          "#nursingstudent #healthcare #studentjobs #unsw #usyd",
+    "Law": "#sydneyinternships #lawstudent #lawschool #clerkship "
+           "#seasonalclerkship #paralegal #studentjobs #unsw #usyd #uts",
 }
+
+
+def _same_ad(jobs):
+    """Drop a listing whose description is word-for-word another one's.
+
+    Law firms post the same program twice -- once under their own name and
+    once through the "SEEK Grad" account with a slightly different title
+    ("First Nations Legal Internship 2027" vs "2027 First Nations Legal
+    Internship Program"). drop_repeats() can't see that because the company
+    names differ, but the first 300 characters of the ad are identical.
+    The copy under a real company name is kept."""
+    agency = {"seek grad", "seek", ""}
+    jobs = sorted(jobs, key=lambda j: (j.get("company_name") or "").strip()
+                  .casefold() in agency)          # real employers first
+    seen, out = set(), []
+    for j in jobs:
+        key = " ".join((j.get("description_text") or "").lower().split())[:300]
+        if key and key in seen:
+            continue
+        seen.add(key)
+        out.append(j)
+    return out
 
 
 def teach_poster_template_the_new_categories():
@@ -77,6 +108,9 @@ def teach_poster_template_the_new_categories():
     for cat, (_f, _d, colours, short) in SIDE.items():
         pt.PALETTES[cat] = colours
         pt.SHORT_CATEGORY[cat] = short
+    # Law gets its own photo folder (library / law books / courthouse), so
+    # it never picks up an engineering or tech photo from the shared pool.
+    pt.CATEGORY_FOLDER["Law"] = "law"      # pipeline_scripts/background pics/law/
     # Own photo-rotation memory, so the main carousels' photo order is untouched.
     pt.ROTATION_FILE = os.path.join(HERE, "side_background_rotation.json")
 
@@ -129,6 +163,8 @@ def build_category(category, tiles):
 
     posted = bc.load_posted_jobs()       # read only
     jobs = [j for j in load_jobs(path) if str(j.get("job_id")) not in posted]
+    if category == "Law":
+        jobs = _same_ad(jobs)
 
     # Same ordering as the main build: jobs WITH a real logo first, then newest.
     jobs.sort(key=lambda j: (bc._has_logo(j), str(j.get("posted_date") or "")),
@@ -180,6 +216,8 @@ def build_category(category, tiles):
 
         lead = category if len(chunks) == 1 else f"{category} (part {part})"
         kind = "roles" if n_grad else ("internships" if len(chunk) != 1 else "internship")
+        if category == "Law":
+            kind = "roles"        # clerkships + paralegal, not all "internships"
         rule = "━" * 13
         caption = "\n".join([
             f"📍 {len(chunk)} {lead} {kind} open in Sydney right now", "",
@@ -221,7 +259,12 @@ def main():
     teach_poster_template_the_new_categories()
     os.makedirs(OUT_ROOT, exist_ok=True)
     tiles = []
-    for category in SIDE:
+    # --only law  -> build just that one (leaves the others' queue alone)
+    only = None
+    if "--only" in sys.argv:
+        want = sys.argv[sys.argv.index("--only") + 1].lower()
+        only = [c for c in SIDE if c.lower().startswith(want)]
+    for category in (only or SIDE):
         print(f"\n{category}")
         build_category(category, tiles)
 
@@ -234,6 +277,8 @@ def main():
               "--set \"Company\" company.com.au   then rebuild.")
     print(f"\nSlides in: {OUT_ROOT}")
     print("Architecture posts Wednesday, Medicine & Health posts Sunday.")
+    print("Law has no day yet -- post it by name: "
+          "python3 publish_to_instagram.py law")
     print("See them:  python3 pipeline_scripts/dashboard.py")
 
 

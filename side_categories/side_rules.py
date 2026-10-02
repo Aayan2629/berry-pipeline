@@ -54,12 +54,36 @@ MEDICINE_TERMS = [
     "dental student", "allied health student",
 ]
 
+# LAW (added Oct 2026). Law students almost never get called "interns".
+# The real names, roughly in order of how common they are on Seek:
+#   * clerkships -- summer / winter / seasonal / vacation clerkships at law
+#     firms (the big one; NSW firms run summer AND winter rounds)
+#   * law clerk / summer clerk / winter clerk
+#   * paralegal and legal assistant roles aimed at law students
+#   * legal intern / legal internship (in-house teams, govt, startups)
+#   * legal cadet / law cadetship (some councils and government agencies)
+#   * PLT = Practical Legal Training placement (final step before admission)
+#   * community legal centre volunteer / student roles
+LAW_TERMS = [
+    "clerkship", "law clerkship", "summer clerkship", "winter clerkship",
+    "seasonal clerkship", "vacation clerkship", "summer clerk", "winter clerk",
+    "seasonal clerk", "law clerk", "legal clerk",
+    "law student", "law students", "student paralegal", "paralegal law student",
+    "paralegal student", "legal assistant law student",
+    "legal intern", "legal internship", "law intern", "law internship",
+    "in-house legal intern", "legal cadet", "legal cadetship", "law cadet",
+    "practical legal training", "PLT placement", "legal volunteer",
+    "community legal centre student", "legal research assistant",
+    "law graduate clerk",
+]
+
 # The dictionary below maps "category name" -> its search terms.
 # (A Python dict is like a lookup table / R named list: SIDE_TERMS["Architecture"]
 # gives you the list of Architecture terms.)
 SIDE_TERMS = {
     "Architecture": ARCHITECTURE_TERMS,
     "Medicine & Health": MEDICINE_TERMS,
+    "Law": LAW_TERMS,
 }
 
 # ===========================================================================
@@ -107,6 +131,19 @@ MEDICINE_EXCLUDE = [
     "biomedical engineer",   # the main pipeline files this under Engineering
 ]
 
+# LAW: is this job IN law? Regex with \b (word boundary) so "law" doesn't
+# match "lawn mowing" or "Lawson St", and "jd" doesn't match "jdk".
+_LAW_TITLE_RE = re.compile(
+    r"\b(law|laws|legal|paralegal|paralegals|clerkship|clerkships|solicitor"
+    r"|solicitors|lawyer|lawyers|litigation|barrister|barristers|juris doctor"
+    r"|jd|llb|plt|practical legal training)\b", re.I)
+
+# Has a law word, but isn't a law job.
+LAW_EXCLUDE = [
+    "law enforcement", "legal secretary", "medico-legal typist",
+    "security", "lawn",
+]
+
 # Longer, unambiguous phrases we're allowed to look for in the DESCRIPTION
 # when the title gives nothing away (e.g. "2027 Summer Vacation Program").
 # Same idea as DESCRIPTION_FALLBACK_RULES in all_jobs.py.
@@ -115,6 +152,12 @@ ARCHITECTURE_DESC_PHRASES = [
     "bachelor of architecture", "master of architecture",
     "architectural practice", "architecture practice", "architecture firm",
     "interior design degree", "landscape architecture",
+]
+LAW_DESC_PHRASES = [
+    "law student", "law students", "studying law", "bachelor of laws",
+    "juris doctor", "clerkship program", "seasonal clerkship",
+    "summer clerkship", "winter clerkship", "practical legal training",
+    "penultimate year law", "penultimate-year law", "final year law",
 ]
 MEDICINE_DESC_PHRASES = [
     "medical degree", "studying medicine", "medical student",
@@ -203,11 +246,74 @@ def is_clear_medicine_student_role(title):
 
 
 # ===========================================================================
+# 3d. LAW: clear student roles only (same idea as Medicine)
+# ===========================================================================
+# A plain "Paralegal" or "Legal Assistant" is a normal job that wants
+# experience. It only counts when the TITLE also says it's for students.
+# Clerkships, clerks, interns, cadets and PLT placements always count.
+# "Clerk" on its own is NOT here: "Litigation Support Clerk" and
+# "Accounts/Admin Clerk" are ordinary admin jobs. Only the law-student
+# clerk names count. "Trainee"/"traineeship" are left out too -- on Seek
+# a "Legal Traineeship" is a school-leaver Cert III, not a law student role.
+_LAW_STUDENT_RE = re.compile(
+    r"\b(law clerk|law clerks|legal clerk|summer clerk|winter clerk"
+    r"|seasonal clerk|vacation clerk|articled clerk|clerkship|clerkships"
+    r"|intern|interns|internship|internships|student|students|undergraduate"
+    r"|undergrad|cadet|cadetship|vacation|vacationer|work experience"
+    r"|volunteer|plt|practical legal training)\b", re.I)
+
+# "clerk" alone isn't enough when it's an ordinary admin clerk at a firm.
+_LAW_NOT_STUDENT_RE = re.compile(
+    r"\b(conveyancing clerk|accounts clerk|filing clerk|probate clerk"
+    r"|records clerk|senior|experienced|associate|lawyer|solicitor"
+    r"|\d\+?\s*(years|yrs)|pqe)\b", re.I)
+
+
+def is_law_title(title):
+    """True when the TITLE says the job is in law."""
+    t = (title or "").lower()
+    return bool(_LAW_TITLE_RE.search(t)) and not any(x in t for x in LAW_EXCLUDE)
+
+
+def has_law_student_word(title):
+    """The student half of the check on its own, for titles like "Seasonal
+    Clerk - Corporate" that don't say law -- the description decides those."""
+    t = title or ""
+    if _LAW_NOT_STUDENT_RE.search(t) and not re.search(
+            r"\b(student|students|clerkship|clerkships)\b", t, re.I):
+        return False
+    return bool(_LAW_STUDENT_RE.search(t))
+
+
+def says_law_student_in_teaser(title, teaser):
+    """A plain "Paralegal - Casual" whose ad summary says it wants a LAW
+    STUDENT ("Ambitious law student with outstanding academics...")."""
+    t = title or ""
+    return is_law_title(t) and not _LAW_NOT_STUDENT_RE.search(t) and \
+        not re.search(r"\b(senior|graduate|lawyer|solicitor|counsel)\b", t, re.I) \
+        and bool(re.search(r"\blaw students?\b", teaser or "", re.I))
+
+
+def is_law_student_role(title):
+    """True for clerkships / law clerks / legal interns / student paralegals.
+
+    Examples:
+      "Summer Clerkship Program 2026/27"         -> True
+      "Paralegal - Law Student (Part Time)"      -> True
+      "Law Clerk"                                -> True
+      "Paralegal"                                -> False (normal job)
+      "Senior Associate - Litigation"            -> False
+      "Lawyer / Solicitor 2+ years PQE"          -> False
+    """
+    return is_law_title(title) and has_law_student_word(title)
+
+
+# ===========================================================================
 # 4. categorize_side() -- the decision function
 # ===========================================================================
 def categorize_side(title, description=""):
     """
-    Returns "Architecture", "Medicine & Health", or None.
+    Returns "Architecture", "Law", "Medicine & Health", or None.
 
     Order of checks (like a chain of if / else if in C):
       1. title matches an Architecture keyword and NOT a tech-architect
@@ -223,6 +329,11 @@ def categorize_side(title, description=""):
        not any(x in t for x in ARCHITECTURE_EXCLUDE):
         return "Architecture"
 
+    # Law sits before Medicine so a "Medico-Legal Intern" or "Health Law
+    # Clerk" is filed as Law (it's a law job that happens to be about health).
+    if is_law_title(t):
+        return "Law"
+
     if any(k in t for k in MEDICINE_KEYWORDS) and \
        not any(x in t for x in MEDICINE_EXCLUDE):
         return "Medicine & Health"
@@ -232,5 +343,7 @@ def categorize_side(title, description=""):
         return "Architecture"
     if any(p in d for p in MEDICINE_DESC_PHRASES):
         return "Medicine & Health"
+    if any(p in d for p in LAW_DESC_PHRASES):
+        return "Law"
 
     return None

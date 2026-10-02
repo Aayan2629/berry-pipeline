@@ -5,6 +5,7 @@ side_categories/scrape_side.py -- scrape Architecture and Medicine ON THE SIDE.
     python3 side_categories/scrape_side.py                    both categories
     python3 side_categories/scrape_side.py --only architecture
     python3 side_categories/scrape_side.py --only medicine
+    python3 side_categories/scrape_side.py --only law
     python3 side_categories/scrape_side.py --no-descriptions  faster test run
 
 WHY IT'S SAFE (doesn't touch the running pipeline)
@@ -36,6 +37,7 @@ At the end it prints a report with the number that answers
 import argparse
 import json
 import os
+import re
 import sys
 import time
 from datetime import datetime
@@ -59,16 +61,20 @@ from all_jobs import (categorize, is_internship, job_track,       # noqa: E402
                       job_age_days, MAX_AGE_DAYS)
 from side_rules import (SIDE_TERMS, categorize_side, is_student_role,  # noqa: E402
                         is_entry_level_architecture_grad,
-                        is_clear_medicine_student_role)
+                        is_clear_medicine_student_role,
+                        is_law_student_role, has_law_student_word,
+                        says_law_student_in_teaser)
 
 # Our own files -- separate from the main pipeline's.
 SIDE_CACHE_FILE = os.path.join(HERE, "side_description_cache.json")
 SIDE_OUT_DIR = os.path.join(REPO, "output", "side_spider")
 
 # Short names you can type after --only, mapped to the real category names.
-SHORT_NAMES = {"architecture": "Architecture", "medicine": "Medicine & Health"}
+SHORT_NAMES = {"architecture": "Architecture", "medicine": "Medicine & Health",
+               "law": "Law"}
 FILE_NAMES = {"Architecture": "architecture.jsonl",
-              "Medicine & Health": "medicine.jsonl"}
+              "Medicine & Health": "medicine.jsonl",
+              "Law": "law.jsonl"}
 
 # A carousel with fewer jobs than this looks thin. Only used for the report
 # at the end -- it doesn't stop anything being written.
@@ -129,14 +135,33 @@ def scrape_category(session, category, args, cache):
     for jid, j in by_id.items():
         title, hint = j["job_title"], j["teaser"]
 
+        # LAW has its own rules (side_rules.py section 3d): clerkships, law
+        # clerks, legal interns, student paralegals, PLT. A plain "Paralegal"
+        # or "Graduate Lawyer" is a normal job / grad job and is left out.
+        if category == "Law":
+            # Law title + student word, OR a clerkship-style title that
+            # doesn't say "law" (the description decides those), OR a plain
+            # paralegal whose summary asks for a law student.
+            clerkish = re.search(r"\b(clerk|clerks|clerkship|clerkships)\b",
+                                 title, re.I) and has_law_student_word(title)
+            if not (is_law_student_role(title) or clerkish
+                    or says_law_student_in_teaser(title, hint)):
+                why["not a student role"] += 1
+                continue
+            if re.search(r"\b(graduate|graduates|grad)\b", title, re.I) and \
+               not re.search(r"\b(clerk|clerkship|clerkships|plt|practical legal"
+                             r"|student|intern|internship)\b", title, re.I):
+                why["graduate programme"] += 1
+                continue
         # Student role? Main rule OR the extra side words (student, cadet...)
-        if not (is_internship(title, hint, j["work_type"])
-                or is_student_role(title)):
+        elif not (is_internship(title, hint, j["work_type"])
+                  or is_student_role(title)):
             why["not a student role"] += 1
             continue
         # Graduate roles: dropped everywhere EXCEPT entry-level architecture
         # grads (see side_rules.py section 3b for why).
-        if job_track(title, hint, j["work_type"]) == "Graduate Programs":
+        if category != "Law" and \
+           job_track(title, hint, j["work_type"]) == "Graduate Programs":
             arch_grad_ok = (category == "Architecture"
                             and is_entry_level_architecture_grad(title))
             if not arch_grad_ok:
@@ -162,6 +187,12 @@ def scrape_category(session, category, args, cache):
         # so nothing ever gets posted twice. We keep a list so you can see
         # the overlap before we merge everything.
         main_cat = categorize(title, hint)
+        if category == "Law" and main_cat and side_cat == "Law" and \
+           not is_internship(title, hint, j["work_type"]):
+            # e.g. "Tax Law Summer Clerk" matches Business's " tax " word,
+            # but the main pipeline only posts internships, so a clerkship
+            # would never go out there. It stays Law.
+            main_cat = None
         if main_cat:
             why["already in Tech/Business/Engineering"] += 1
             if side_cat == category:

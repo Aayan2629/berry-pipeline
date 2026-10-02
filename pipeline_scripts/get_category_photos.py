@@ -79,6 +79,10 @@ QUERIES = {
     "engineering": ["engineering blueprint desk", "construction site crane sky",
                     "hard hat safety helmet", "bridge structure steel",
                     "workshop tools bench", "architecture model desk"],
+    # Law (Oct 2026) -- used by side_categories/build_side_carousels.py
+    "law": ["law books library shelves", "courthouse columns building",
+            "scales of justice desk", "lawyer desk documents bright",
+            "legal books gavel", "sydney cbd office building"],
 }
 
 
@@ -100,9 +104,12 @@ def good_enough(blob):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--per-cat", type=int, default=10)
+    ap.add_argument("--only", default=None, help="one folder, e.g. law")
     args = ap.parse_args()
 
     for cat, queries in QUERIES.items():
+        if args.only and cat != args.only:
+            continue
         folder = os.path.join(OUT, cat)
         os.makedirs(folder, exist_ok=True)
         have = len([f for f in os.listdir(folder) if f.lower().endswith(".jpg")])
