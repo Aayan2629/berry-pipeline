@@ -20,8 +20,9 @@
 # and the runner is destroyed at the end of it.
 #
 # WHY IT RUNS EVERY DAY WHEN YOU ONLY POST THREE TIMES A WEEK
-# publish_to_instagram.py already knows the schedule: Monday tech, Thursday
-# business, Saturday engineering, and overflow parts on the following day. On
+# publish_to_instagram.py already knows the schedule: Monday tech, Wednesday
+# architecture, Thursday business, Friday law, Saturday engineering, Sunday
+# medicine. On
 # any other day it finds nothing due and exits happily. Putting that decision
 # in one place beats encoding the calendar twice and watching the two drift.
 # ---------------------------------------------------------------------------
@@ -29,12 +30,25 @@ name: 1. berry, daily
 
 on:
   schedule:
-    # 21:20 UTC. That is 8:20am Sydney in summer, 7:20am in winter.
-    # Twenty past, not on the hour: GitHub queues scheduled jobs and the top
-    # of every hour is its busiest minute, so :00 is where the long delays
-    # live. There is no guarantee on the minute either way -- if this has to
-    # land at an exact time, GitHub cron is the wrong tool.
-    - cron: '20 21 * * *'
+    # EVERYTHING HAS TO BE UP BEFORE 9AM SYDNEY.
+    #
+    # The old single run was set for 21:20 UTC (7:20am) but GitHub actually
+    # started it 3-4 HOURS late every day (late Sept 2026: 00:35-01:05 UTC),
+    # so posts were landing around 10:45-11am. GitHub cron has no on-time
+    # guarantee, so this now fires three times, very early:
+    #
+    #   UTC      Sydney summer (AEDT)   Sydney winter (AEST)
+    #   16:37    3:37am                 2:37am
+    #   18:37    5:37am                 4:37am
+    #   20:07    7:07am                 6:07am
+    #
+    # All three are the SAME Sydney day, so the schedule still picks the right
+    # category. Whichever starts first posts; publish_to_instagram.py sees
+    # today's post in posted_history.json and the later runs post nothing.
+    # Odd minutes on purpose: :00 is GitHub's busiest (slowest) minute.
+    - cron: '37 16 * * *'
+    - cron: '37 18 * * *'
+    - cron: '7 20 * * *'
   workflow_dispatch:
 
 # Two runs must never overlap. The second one would read state the first has
