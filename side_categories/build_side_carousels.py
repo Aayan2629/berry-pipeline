@@ -59,10 +59,8 @@ SIDE = {
     "Medicine & Health": ("medicine.jsonl", "Sunday",
                           ((46, 128, 92), (16, 46, 34)), "Medicine & health"),
     # Law (Oct 2026): muted gold/bronze, same darkness as the others.
-    # No posting day yet -- it is NOT in publish_to_instagram.py's SCHEDULE,
-    # so it only ever goes out when you post it by name:
-    #     python3 publish_to_instagram.py law
-    "Law": ("law.jsonl", "Unscheduled",
+    # Posts on Fridays (publish_to_instagram.py SCHEDULE).
+    "Law": ("law.jsonl", "Friday",
             ((150, 112, 44), (52, 38, 16)), "Law"),
 }
 
@@ -277,8 +275,7 @@ def main():
               "--set \"Company\" company.com.au   then rebuild.")
     print(f"\nSlides in: {OUT_ROOT}")
     print("Architecture posts Wednesday, Medicine & Health posts Sunday.")
-    print("Law has no day yet -- post it by name: "
-          "python3 publish_to_instagram.py law")
+    print("Law posts Friday.")
     print("See them:  python3 pipeline_scripts/dashboard.py")
 
 

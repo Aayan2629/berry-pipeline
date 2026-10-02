@@ -66,6 +66,7 @@ COLOURS = {
     "Engineering": "#9a4a2c",
     "Architecture": "#545c96",
     "Medicine & Health": "#2e805c",
+    "Law": "#96702c",
 }
 FALLBACK = "#8e2f52"
 

@@ -64,13 +64,13 @@ ENV_FILE = os.path.join(HERE, ".env")
 API = "https://graph.instagram.com/v21.0"
 
 # One category per posting day. Architecture (Wednesday) and Medicine &
-# Health (Sunday) joined in Sept 2026; Tuesday and Friday are the rest days,
-# and where an overflow post lands when a category has more than five new
-# listings. Monday is 0.
+# Health (Sunday) joined in Sept 2026, Law (Friday) in Oct 2026. Tuesday is
+# the only rest day. Monday is 0.
 SCHEDULE = {
     0: "Technology, Data & AI",
     2: "Architecture",                 # built by side_categories/build_side_carousels.py
     3: "Business, Commerce, Marketing & Finance",
+    4: "Law",                          # built by side_categories/build_side_carousels.py
     5: "Engineering",
     6: "Medicine & Health",            # built by side_categories/build_side_carousels.py
 }
@@ -81,6 +81,7 @@ SCHEDULE = {
 SCHEDULE_START = {
     "Medicine & Health": "2026-09-27",   # first Sunday
     "Architecture": "2026-09-30",        # first Wednesday
+    "Law": "2026-10-02",                 # first Friday (posted by hand that day)
 }
 
 
@@ -635,6 +636,18 @@ def main():
                   f"leaving it alone for another {mins // 60}h {mins % 60}m.")
             print("Nothing has been lost -- the carousel stays in the queue and "
                   "goes out on the next run once the block lifts.")
+            return 0
+        # ONE POST A DAY. berry.yml now fires several times each morning
+        # (GitHub starts scheduled runs hours late, so the backups make sure
+        # something lands before 9am). Whichever run gets there first posts;
+        # the rest see today's post in the history and stop here. Without
+        # this, a later run would post today's part 2 as well.
+        today_str = now().strftime("%Y-%m-%d")
+        if not args.now and not args.dry_run and any(
+                str(p.get("posted_at", "")).startswith(today_str)
+                for p in history["posts"]):
+            print(f"Already posted today ({today_str}). One a day -- "
+                  f"nothing more to do.")
             return 0
         carousel, category, back = pick_for_today()
         if not carousel and args.now:
