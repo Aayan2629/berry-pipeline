@@ -1,12 +1,9 @@
 {
   "ig_token_obtained": "2026-09-02",
-  "updated_at": "2026-10-03T22:49:52+00:00",
+  "updated_at": "2026-10-04T12:47:40+00:00",
   "last_post": {
-    "outcome": "success",
-    "at": "2026-10-03T23:00:48+00:00",
-    "log": [
-      "Sunday is Medicine & Health day, but there is nothing waiting in the queue for it.",
-      "Scrape and rebuild, or use --now to post another category early."
-    ]
+    "outcome": "skipped",
+    "at": "2026-10-04T13:00:24+00:00",
+    "log": []
   }
 }
