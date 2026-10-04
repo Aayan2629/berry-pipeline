@@ -80,6 +80,13 @@ FILE_NAMES = {"Architecture": "architecture.jsonl",
 # at the end -- it doesn't stop anything being written.
 MIN_JOBS_FOR_A_POST = 3
 
+# How old a listing can be and still count. The main pipeline uses 21 days
+# (all_jobs.MAX_AGE_DAYS), but law clerkships and firm "pathway programs"
+# stay open for weeks -- Russell Kennedy's Paralegal Pathway Program was
+# dropped at 26 days old. Seek ads run for 30 days, so 31 keeps everything
+# Seek is still showing. Change it here, or per run with --days.
+SIDE_MAX_AGE_DAYS = 31
+
 
 def load_cache():
     """Our own description cache (job id -> description HTML)."""
@@ -174,7 +181,7 @@ def scrape_category(session, category, args, cache):
             why["mixed job, not clearly for students"] += 1
             continue
         age = job_age_days(j["posted_date"])
-        if age is not None and age > MAX_AGE_DAYS:
+        if age is not None and age > args.days:
             why["too old"] += 1
             continue
 
@@ -276,7 +283,7 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--only", choices=list(SHORT_NAMES),
                     help="run just one category")
-    ap.add_argument("--days", type=int, default=MAX_AGE_DAYS)
+    ap.add_argument("--days", type=int, default=SIDE_MAX_AGE_DAYS)
     ap.add_argument("--pages", type=int, default=2,
                     help="pages per search, 20 results each (default 2)")
     ap.add_argument("--region", default="All Sydney NSW")

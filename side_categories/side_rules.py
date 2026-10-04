@@ -260,7 +260,8 @@ _LAW_STUDENT_RE = re.compile(
     r"|seasonal clerk|vacation clerk|articled clerk|clerkship|clerkships"
     r"|intern|interns|internship|internships|student|students|undergraduate"
     r"|undergrad|cadet|cadetship|vacation|vacationer|work experience"
-    r"|volunteer|plt|practical legal training)\b", re.I)
+    r"|volunteer|plt|practical legal training"
+    r"|pathway program|pathway programme)\b", re.I)
 
 # "clerk" alone isn't enough when it's an ordinary admin clerk at a firm.
 _LAW_NOT_STUDENT_RE = re.compile(
