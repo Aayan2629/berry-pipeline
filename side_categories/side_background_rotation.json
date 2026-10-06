@@ -12,7 +12,9 @@
   "law@2026-W40": "background pics/law/pexels_25578785.jpg",
   "architecture@2026-W41": "background pics/law/pexels_29861708.jpg",
   "medicine-health@2026-W41": "background pics/notebook_coffee_13.jpg",
-  "law@2026-W41": "background pics/law/library_09.jpg"
+  "law@2026-W41": "background pics/law/library_09.jpg",
+  "architecture-part1@2026-W41": "background pics/desk_laptop_01.jpg",
+  "architecture-part2@2026-W41": "background pics/library_07.jpg"
  },
  "last_used": {
   "background pics/engineering/pexels_37090943.jpg": 1,
@@ -29,7 +31,9 @@
   "background pics/law/pexels_25578785.jpg": 12,
   "background pics/law/pexels_29861708.jpg": 13,
   "background pics/notebook_coffee_13.jpg": 14,
-  "background pics/law/library_09.jpg": 15
+  "background pics/law/library_09.jpg": 15,
+  "background pics/desk_laptop_01.jpg": 16,
+  "background pics/library_07.jpg": 17
  },
- "counter": 15
+ "counter": 17
 }
