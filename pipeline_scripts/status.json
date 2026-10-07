@@ -1,11 +1,24 @@
 {
   "ig_token_obtained": "2026-09-02",
-  "updated_at": "2026-10-06T23:45:30+00:00",
+  "updated_at": "2026-10-07T21:32:54+00:00",
   "last_post": {
     "outcome": "success",
-    "at": "2026-10-06T23:56:42+00:00",
+    "at": "2026-10-07T21:46:28+00:00",
     "log": [
-      "Already posted today (2026-10-07). One a day -- nothing more to do."
+      "    slide 4 ok",
+      "    slide 5 ok",
+      "    slide 6 ok",
+      "    slide 7 ok",
+      "    slide 8 ok",
+      "  waiting for Meta to fetch the slides...",
+      "  grouping them into a carousel...",
+      "    still processing the carousel... (2s)",
+      "  publishing...",
+      "  recorded 6 listing(s) as posted",
+      "  moved out of the queue -> posted_carousels/business-commerce-marketing-finance-part1",
+      "  LIVE -- https://www.instagram.com/berry.internships.syd/",
+      "  media id: 18129087274697306",
+      "  next scheduled: Fri 09 Oct -- Law"
     ]
   }
 }
