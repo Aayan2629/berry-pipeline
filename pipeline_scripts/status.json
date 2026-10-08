@@ -1,11 +1,24 @@
 {
   "ig_token_obtained": "2026-09-02",
-  "updated_at": "2026-10-08T00:08:19+00:00",
+  "updated_at": "2026-10-08T21:29:19+00:00",
   "last_post": {
     "outcome": "success",
-    "at": "2026-10-08T00:19:12+00:00",
+    "at": "2026-10-08T21:42:40+00:00",
     "log": [
-      "Already posted today (2026-10-08). One a day -- nothing more to do."
+      "    slide 1 ok",
+      "    slide 2 ok",
+      "    slide 3 ok",
+      "    slide 4 ok",
+      "    slide 5 ok",
+      "  waiting for Meta to fetch the slides...",
+      "  grouping them into a carousel...",
+      "    still processing the carousel... (2s)",
+      "  publishing...",
+      "  recorded 3 listing(s) as posted",
+      "  moved out of the queue -> posted_carousels/law",
+      "  LIVE -- https://www.instagram.com/berry.internships.syd/",
+      "  media id: 17870724246646809",
+      "  next scheduled: Sat 10 Oct -- Engineering"
     ]
   }
 }
