@@ -1,11 +1,24 @@
 {
   "ig_token_obtained": "2026-09-02",
-  "updated_at": "2026-10-10T23:28:10+00:00",
+  "updated_at": "2026-10-11T20:33:24+00:00",
   "last_post": {
     "outcome": "success",
-    "at": "2026-10-10T23:38:53+00:00",
+    "at": "2026-10-11T20:46:33+00:00",
     "log": [
-      "Already posted today (2026-10-11). One a day -- nothing more to do."
+      "    slide 2 ok",
+      "    slide 3 ok",
+      "    slide 4 ok",
+      "    slide 5 ok",
+      "    slide 6 ok",
+      "  waiting for Meta to fetch the slides...",
+      "  grouping them into a carousel...",
+      "    still processing the carousel... (2s)",
+      "  publishing...",
+      "  recorded 4 listing(s) as posted",
+      "  moved out of the queue -> posted_carousels/technology-data-ai-part1",
+      "  LIVE -- https://www.instagram.com/berry.internships.syd/",
+      "  media id: 17992717275019497",
+      "  next scheduled: Wed 14 Oct -- Architecture"
     ]
   }
 }
