@@ -1,11 +1,24 @@
 {
   "ig_token_obtained": "2026-10-13",
-  "updated_at": "2026-10-16T22:45:56+00:00",
+  "updated_at": "2026-10-17T18:48:48+00:00",
   "last_post": {
     "outcome": "success",
-    "at": "2026-10-16T22:56:37+00:00",
+    "at": "2026-10-17T19:01:36+00:00",
     "log": [
-      "Already posted today (2026-10-17). One a day -- nothing more to do."
+      "    slide 2 ok",
+      "    slide 3 ok",
+      "    slide 4 ok",
+      "    slide 5 ok",
+      "    slide 6 ok",
+      "    slide 7 ok",
+      "  waiting for Meta to fetch the slides...",
+      "  grouping them into a carousel...",
+      "  publishing...",
+      "  recorded 5 listing(s) as posted",
+      "  moved out of the queue -> posted_carousels/medicine-health",
+      "  LIVE -- https://www.instagram.com/berry.internships.syd/",
+      "  media id: 17961829509237649",
+      "  next scheduled: Mon 19 Oct -- Technology, Data & AI"
     ]
   }
 }
