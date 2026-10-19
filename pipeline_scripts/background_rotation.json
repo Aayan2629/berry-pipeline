@@ -26,7 +26,12 @@
   "engineering-part2@2026-W42": "background pics/engineering/pexels_37090943.jpg",
   "technology-data-ai@2026-W42": "background pics/tech/pexels_31058700.jpg",
   "technology-data-ai-part1@2026-W42": "background pics/tech/pexels_7793740.jpg",
-  "technology-data-ai-part2@2026-W42": "background pics/tech/pexels_5552789.jpg"
+  "technology-data-ai-part2@2026-W42": "background pics/tech/pexels_5552789.jpg",
+  "business-commerce-marketing-finance-part1@2026-W43": "background pics/finance/pexels_13045981.jpg",
+  "business-commerce-marketing-finance-part2@2026-W43": "background pics/finance/pexels_32216281.jpg",
+  "engineering-part1@2026-W43": "background pics/engineering/pexels_5504386.jpg",
+  "engineering-part2@2026-W43": "background pics/engineering/pexels_31039719.jpg",
+  "technology-data-ai@2026-W43": "background pics/tech/pexels_29765806.jpg"
  },
  "last_used": {
   "background pics/cafe_laptop_11.jpg": 1,
@@ -38,7 +43,7 @@
   "background pics/finance/pexels_13748129.jpg": 7,
   "background pics/finance/pexels_4515802.jpg": 8,
   "background pics/tech/pexels_5552789.jpg": 33,
-  "background pics/tech/pexels_29765806.jpg": 10,
+  "background pics/tech/pexels_29765806.jpg": 38,
   "background pics/engineering/pexels_36628880.jpg": 11,
   "background pics/engineering/pexels_5504311.jpg": 12,
   "background pics/finance/pexels_38111056.jpg": 13,
@@ -60,7 +65,11 @@
   "background pics/engineering/pexels_8837715.jpg": 29,
   "background pics/engineering/pexels_37090943.jpg": 30,
   "background pics/tech/pexels_31058700.jpg": 31,
-  "background pics/tech/pexels_7793740.jpg": 32
+  "background pics/tech/pexels_7793740.jpg": 32,
+  "background pics/finance/pexels_13045981.jpg": 34,
+  "background pics/finance/pexels_32216281.jpg": 35,
+  "background pics/engineering/pexels_5504386.jpg": 36,
+  "background pics/engineering/pexels_31039719.jpg": 37
  },
- "counter": 33
+ "counter": 38
 }
