@@ -24,7 +24,9 @@
   "medicine-health-part1@2026-W43": "background pics/tech/pexels_890065.jpg",
   "medicine-health-part2@2026-W43": "background pics/cafe_work_12.jpg",
   "medicine-health@2026-W44": "background pics/library_09.jpg",
-  "law@2026-W44": "background pics/law/pexels_37441911.jpg"
+  "law@2026-W44": "background pics/law/pexels_37441911.jpg",
+  "medicine-health-part1@2026-W44": "background pics/notebook_coffee_14.jpg",
+  "medicine-health-part2@2026-W44": "background pics/finance/pexels_4515802.jpg"
  },
  "last_used": {
   "background pics/engineering/pexels_37090943.jpg": 1,
@@ -53,7 +55,9 @@
   "background pics/tech/pexels_890065.jpg": 24,
   "background pics/cafe_work_12.jpg": 25,
   "background pics/library_09.jpg": 26,
-  "background pics/law/pexels_37441911.jpg": 27
+  "background pics/law/pexels_37441911.jpg": 27,
+  "background pics/notebook_coffee_14.jpg": 28,
+  "background pics/finance/pexels_4515802.jpg": 29
  },
- "counter": 27
+ "counter": 29
 }
