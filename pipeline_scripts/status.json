@@ -1,18 +1,24 @@
 {
   "ig_token_obtained": "2026-10-13",
-  "updated_at": "2026-11-01T20:49:10+00:00",
+  "updated_at": "2026-11-01T22:22:30+00:00",
   "last_post": {
-    "outcome": "failure",
-    "at": "2026-11-01T21:00:10+00:00",
+    "outcome": "success",
+    "at": "2026-11-01T22:33:14+00:00",
     "log": [
-      "Carousel: technology-data-ai-part1",
-      "  putting slides online...",
-      "  copied 8 slides into the repo",
-      "Push failed:",
-      "warning: redirecting to https://github.com/Aayan2629/berry-slides.git/",
-      "fatal: could not read Username for 'https://github.com': No such device or address",
-      "error: failed to push some refs to 'https://github.com/Aayan2629/berry-slides.git'",
-      "Most likely no GITHUB_TOKEN in .env -- see the notes at the top of this file."
+      "    slide 4 ok",
+      "    slide 5 ok",
+      "    slide 6 ok",
+      "    slide 7 ok",
+      "    slide 8 ok",
+      "  waiting for Meta to fetch the slides...",
+      "  grouping them into a carousel...",
+      "    still processing the carousel... (2s)",
+      "  publishing...",
+      "  recorded 6 listing(s) as posted",
+      "  moved out of the queue -> posted_carousels/technology-data-ai-part1",
+      "  LIVE -- https://www.instagram.com/berry.internships.syd/",
+      "  media id: 18108183299571818",
+      "  next scheduled: Wed 04 Nov -- Architecture"
     ]
   }
 }
