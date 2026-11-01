@@ -1,11 +1,18 @@
 {
   "ig_token_obtained": "2026-10-13",
-  "updated_at": "2026-10-31T23:18:42+00:00",
+  "updated_at": "2026-11-01T20:49:10+00:00",
   "last_post": {
-    "outcome": "success",
-    "at": "2026-10-31T23:29:06+00:00",
+    "outcome": "failure",
+    "at": "2026-11-01T21:00:10+00:00",
     "log": [
-      "Already posted today (2026-11-01). One a day -- nothing more to do."
+      "Carousel: technology-data-ai-part1",
+      "  putting slides online...",
+      "  copied 8 slides into the repo",
+      "Push failed:",
+      "warning: redirecting to https://github.com/Aayan2629/berry-slides.git/",
+      "fatal: could not read Username for 'https://github.com': No such device or address",
+      "error: failed to push some refs to 'https://github.com/Aayan2629/berry-slides.git'",
+      "Most likely no GITHUB_TOKEN in .env -- see the notes at the top of this file."
     ]
   }
 }
