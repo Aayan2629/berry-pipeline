@@ -39,7 +39,13 @@
   "engineering-part1@2026-W44": "background pics/engineering/pexels_36628880.jpg",
   "engineering-part2@2026-W44": "background pics/engineering/pexels_5504311.jpg",
   "technology-data-ai-part1@2026-W44": "background pics/tech/pexels_29283981.jpg",
-  "technology-data-ai-part2@2026-W44": "background pics/tech/pexels_890065.jpg"
+  "technology-data-ai-part2@2026-W44": "background pics/tech/pexels_890065.jpg",
+  "business-commerce-marketing-finance-part1@2026-W45": "background pics/finance/pexels_38111056.jpg",
+  "business-commerce-marketing-finance-part2@2026-W45": "background pics/finance/pexels_12336824.jpg",
+  "engineering-part1@2026-W45": "background pics/engineering/pexels_11116101.jpg",
+  "engineering-part2@2026-W45": "background pics/engineering/pexels_16552840.jpg",
+  "technology-data-ai-part1@2026-W45": "background pics/tech/pexels_32216281.jpg",
+  "technology-data-ai-part2@2026-W45": "background pics/tech/pexels_376704.jpg"
  },
  "last_used": {
   "background pics/cafe_laptop_11.jpg": 1,
@@ -54,20 +60,20 @@
   "background pics/tech/pexels_29765806.jpg": 38,
   "background pics/engineering/pexels_36628880.jpg": 43,
   "background pics/engineering/pexels_5504311.jpg": 44,
-  "background pics/finance/pexels_38111056.jpg": 13,
-  "background pics/finance/pexels_12336824.jpg": 14,
+  "background pics/finance/pexels_38111056.jpg": 47,
+  "background pics/finance/pexels_12336824.jpg": 48,
   "background pics/tech/pexels_27920699.jpg": 39,
   "background pics/tech/pexels_7693229.jpg": 40,
-  "background pics/engineering/pexels_11116101.jpg": 17,
-  "background pics/engineering/pexels_16552840.jpg": 18,
+  "background pics/engineering/pexels_11116101.jpg": 49,
+  "background pics/engineering/pexels_16552840.jpg": 50,
   "background pics/tech/pexels_29283981.jpg": 45,
   "background pics/finance/pexels_17382268.jpg": 20,
   "background pics/finance/pexels_22696774.jpg": 21,
   "background pics/engineering/pexels_6199508.jpg": 22,
   "background pics/engineering/pexels_17382268.jpg": 23,
   "background pics/tech/pexels_890065.jpg": 46,
-  "background pics/tech/pexels_32216281.jpg": 25,
-  "background pics/tech/pexels_376704.jpg": 26,
+  "background pics/tech/pexels_32216281.jpg": 51,
+  "background pics/tech/pexels_376704.jpg": 52,
   "background pics/finance/pexels_8825142.jpg": 27,
   "background pics/finance/pexels_1233262.jpg": 28,
   "background pics/engineering/pexels_8837715.jpg": 29,
@@ -79,5 +85,5 @@
   "background pics/engineering/pexels_5504386.jpg": 36,
   "background pics/engineering/pexels_31039719.jpg": 37
  },
- "counter": 46
+ "counter": 52
 }

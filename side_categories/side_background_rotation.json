@@ -27,7 +27,10 @@
   "law@2026-W44": "background pics/law/pexels_37441911.jpg",
   "medicine-health-part1@2026-W44": "background pics/notebook_coffee_14.jpg",
   "medicine-health-part2@2026-W44": "background pics/finance/pexels_4515802.jpg",
-  "architecture@2026-W44": "background pics/engineering/pexels_6199508.jpg"
+  "architecture@2026-W44": "background pics/engineering/pexels_6199508.jpg",
+  "architecture@2026-W45": "background pics/law/pexels_1517355.jpg",
+  "medicine-health@2026-W45": "background pics/tech/pexels_5552789.jpg",
+  "law@2026-W45": "background pics/law/pexels_30618330.jpg"
  },
  "last_used": {
   "background pics/engineering/pexels_37090943.jpg": 1,
@@ -59,7 +62,10 @@
   "background pics/law/pexels_37441911.jpg": 27,
   "background pics/notebook_coffee_14.jpg": 28,
   "background pics/finance/pexels_4515802.jpg": 29,
-  "background pics/engineering/pexels_6199508.jpg": 30
+  "background pics/engineering/pexels_6199508.jpg": 30,
+  "background pics/law/pexels_1517355.jpg": 31,
+  "background pics/tech/pexels_5552789.jpg": 32,
+  "background pics/law/pexels_30618330.jpg": 33
  },
- "counter": 30
+ "counter": 33
 }
