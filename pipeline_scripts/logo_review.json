@@ -557,5 +557,19 @@
     "count": 1,
     "saw": null,
     "confirmed": false
+  },
+  "CGC Recruitment": {
+    "domain": "cgc.com.au",
+    "why": "no candidate domain answered",
+    "count": 1,
+    "saw": null,
+    "confirmed": false
+  },
+  "Kennedy Associates Architects": {
+    "domain": "kennedy.com.au",
+    "why": "kennedy.com.au answered but says \"Shop Luxury Watches Online | House Of Kennedy\n |\"",
+    "count": 1,
+    "saw": "Shop Luxury Watches Online | House Of Kennedy\n | House of Kennedy",
+    "confirmed": false
   }
 }
