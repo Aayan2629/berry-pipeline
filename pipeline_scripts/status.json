@@ -1,11 +1,12 @@
 {
-  "ig_token_obtained": "2026-10-13",
-  "updated_at": "2026-11-17T02:52:51+00:00",
+  "ig_token_obtained": "2026-11-17",
+  "updated_at": "2026-11-17T23:38:30+00:00",
   "last_post": {
     "outcome": "success",
-    "at": "2026-11-17T03:03:11+00:00",
+    "at": "2026-11-17T23:50:57+00:00",
     "log": [
-      "Tuesday is a rest day and nothing is left over from the day before. Nothing to do."
+      "Wednesday is Architecture day, but there is nothing waiting in the queue for it.",
+      "Scrape and rebuild, or use --now to post another category early."
     ]
   }
 }
