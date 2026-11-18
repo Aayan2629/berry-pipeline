@@ -1,9 +1,9 @@
 {
   "ig_token_obtained": "2026-11-17",
-  "updated_at": "2026-11-18T01:16:16+00:00",
+  "updated_at": "2026-11-18T02:20:15+00:00",
   "last_post": {
     "outcome": "success",
-    "at": "2026-11-18T01:26:40+00:00",
+    "at": "2026-11-18T02:30:55+00:00",
     "log": [
       "Wednesday is Architecture day, but there is nothing waiting in the queue for it.",
       "Scrape and rebuild, or use --now to post another category early."
